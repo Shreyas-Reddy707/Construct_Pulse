@@ -1,4 +1,4 @@
-SECRET_KEY: str = os.getenv("SECRET_KEY", "CHANGE_ME")import os
+import os
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = os.getenv("SECRET_KEY", "CHANGE_ME")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "CHANGE_ME")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/constructpulse")
 
     class Config:
         env_file = ".env"
