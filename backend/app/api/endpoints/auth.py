@@ -13,7 +13,7 @@ from pydantic import BaseModel
 from typing import Optional
 from app.models.models import UserRole
 
-DEMO_AUTH = os.getenv("DEMO_AUTH", "true").lower() == "true"
+DEMO_AUTH = os.getenv("DEMO_AUTH", "false").lower() == "true"
 
 @router.post("/login", response_model=schemas.Token)
 def login(login_data: schemas.FirebaseLogin, db: Session = Depends(get_db)):
