@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -58,8 +59,19 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
     final List<Barcode> barcodes = capture.barcodes;
     if (barcodes.isEmpty) return;
 
-    final String? siteId = barcodes.first.rawValue;
-    if (siteId == null || siteId.isEmpty) return;
+    final String? rawValue = barcodes.first.rawValue;
+    if (rawValue == null || rawValue.isEmpty) return;
+
+    String siteId;
+    String qrToken;
+    try {
+      final Map<String, dynamic> data = jsonDecode(rawValue);
+      siteId = data['site_id'];
+      qrToken = data['qr_token'];
+    } catch (e) {
+      siteId = rawValue;
+      qrToken = rawValue; // fallback
+    }
 
     setState(() {
       _isScanning = false;
@@ -68,22 +80,24 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
 
     _scannerController.stop();
 
-    await _processAttendance(siteId);
+    await _processAttendance(siteId, qrToken);
   }
 
-  Future<void> _processAttendance(String siteId) async {
+  Future<void> _processAttendance(String siteId, String qrToken) async {
     try {
       final position = await _determinePosition();
       
       if (_isCheckingIn) {
         await ref.read(attendanceNotifierProvider.notifier).checkIn(
           siteId,
+          qrToken,
           lat: position?.latitude,
           lng: position?.longitude,
         );
       } else {
         await ref.read(attendanceNotifierProvider.notifier).checkOut(
           siteId,
+          qrToken,
           lat: position?.latitude,
           lng: position?.longitude,
         );
@@ -135,7 +149,8 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
     
     _scannerController.stop();
     const dummySiteId = 'S-12345';
-    await _processAttendance(dummySiteId);
+    const dummyQrToken = 'dummy-token';
+    await _processAttendance(dummySiteId, dummyQrToken);
   }
 
   void _showSuccessDialog(String siteId, Position? position) {
@@ -181,6 +196,8 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
               text: 'Done',
               backgroundColor: AppColors.success,
               onPressed: () {
+                ref.invalidate(todayAttendanceProvider);
+                ref.invalidate(attendanceHistoryProvider);
                 Navigator.of(ctx).pop();
                 Navigator.of(context).pop();
               },

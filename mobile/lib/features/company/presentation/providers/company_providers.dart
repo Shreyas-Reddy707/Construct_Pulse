@@ -33,3 +33,18 @@ final contractorProvider = FutureProvider.family<Contractor, String>((ref, id) a
   final repository = ref.read(companyRepositoryProvider);
   return repository.getContractor(id);
 });
+
+final publicDepartmentsProvider = FutureProvider<List<Department>>((ref) async {
+  final repository = ref.read(companyRepositoryProvider);
+  return repository.getPublicDepartments();
+});
+
+final publicContractorsProvider = FutureProvider<List<Contractor>>((ref) async {
+  final repository = ref.read(companyRepositoryProvider);
+  return repository.getPublicContractors();
+});
+
+final publicCompaniesProvider = FutureProvider<List<Company>>((ref) async {
+  final repository = ref.read(companyRepositoryProvider);
+  return repository.getPublicCompanies();
+});

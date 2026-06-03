@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 /// Emergency Muster Screen (Spec §82)
-class EmergencyMusterScreen extends StatefulWidget {
+class EmergencyMusterScreen extends ConsumerStatefulWidget {
   const EmergencyMusterScreen({super.key});
 
   @override
-  State<EmergencyMusterScreen> createState() => _EmergencyMusterScreenState();
+  ConsumerState<EmergencyMusterScreen> createState() => _EmergencyMusterScreenState();
 }
 
-class _EmergencyMusterScreenState extends State<EmergencyMusterScreen> {
+class _EmergencyMusterScreenState extends ConsumerState<EmergencyMusterScreen> {
   bool _generated = false;
   String _selectedType = 'fire';
 
@@ -29,14 +31,72 @@ class _EmergencyMusterScreenState extends State<EmergencyMusterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(authProvider).user;
+    final isWorker = currentUser?.isWorker ?? true;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Emergency Muster'),
+        title: Text(isWorker ? 'Emergency Actions' : 'Emergency Muster'),
         backgroundColor: AppColors.danger,
         foregroundColor: Colors.white,
       ),
-      body: _generated ? _musterReport() : _triggerView(),
+      body: isWorker 
+          ? _workerEmergencyView() 
+          : (_generated ? _musterReport() : _triggerView()),
+    );
+  }
+
+  Widget _workerEmergencyView() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: AppColors.emergencyGradient,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(children: [
+            const Icon(Icons.warning_rounded, color: Colors.white, size: 64),
+            const SizedBox(height: 16),
+            Text('EMERGENCY SOS', style: AppTypography.h2.copyWith(color: Colors.white, letterSpacing: 2)),
+            const SizedBox(height: 8),
+            Text('Tap to immediately alert all site personnel and supervisors.', style: AppTypography.body.copyWith(color: Colors.white70), textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.danger,
+                minimumSize: const Size(double.infinity, 64),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('SOS Alert Raised'), backgroundColor: AppColors.danger));
+              },
+              child: const Text('RAISE ALARM', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            ),
+          ]),
+        ),
+        const SizedBox(height: 24),
+        Text('Quick Actions', style: AppTypography.h4),
+        const SizedBox(height: 16),
+        ListTile(
+          leading: const CircleAvatar(backgroundColor: AppColors.primaryLight, child: Icon(Icons.phone_rounded, color: AppColors.primary)),
+          title: const Text('Call Supervisor'),
+          subtitle: const Text('John Doe - Site Manager'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+          onTap: () {},
+        ),
+        const SizedBox(height: 12),
+        ListTile(
+          leading: const CircleAvatar(backgroundColor: AppColors.secondaryLight, child: Icon(Icons.contact_phone_rounded, color: AppColors.secondary)),
+          title: const Text('Emergency Contacts'),
+          subtitle: const Text('View site emergency numbers'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+          onTap: () {},
+        ),
+      ]),
     );
   }
 

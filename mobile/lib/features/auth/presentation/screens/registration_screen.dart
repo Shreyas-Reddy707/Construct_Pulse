@@ -21,6 +21,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
   final _designationCtrl = TextEditingController();
   final _emergNameCtrl = TextEditingController();
   final _emergPhoneCtrl = TextEditingController();
+  String? _companyId;
   String? _deptId;
   String? _contractorId;
 
@@ -36,10 +37,29 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
 
   void _submit() {
     if (_formKey.currentState?.validate() ?? false) {
-      debugPrint('Registration Submit: Selected Department ID = $_deptId, Contractor ID = $_contractorId');
+      if (_companyId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a Company'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        return;
+      }
+      if (_deptId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select a Department'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+        return;
+      }
+      debugPrint('Registration Submit: Selected Company ID = $_companyId, Department ID = $_deptId, Contractor ID = $_contractorId');
       ref.read(authProvider.notifier).register(
         firstName: _firstNameCtrl.text.trim(),
         lastName: _lastNameCtrl.text.trim(),
+        companyId: _companyId!,
         departmentId: _deptId!,
         contractorId: _contractorId,
         designation: _designationCtrl.text.trim(),
@@ -54,8 +74,9 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
     final state = ref.watch(authProvider);
     final loading = state.status == AuthStatus.loading;
 
-    final deptsAsync = ref.watch(departmentsProvider);
-    final contractorsAsync = ref.watch(contractorsProvider);
+    final companiesAsync = ref.watch(publicCompaniesProvider);
+    final deptsAsync = ref.watch(publicDepartmentsProvider);
+    final contractorsAsync = ref.watch(publicContractorsProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -82,6 +103,21 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               const SizedBox(height: 24),
               _section('Work Information'),
               const SizedBox(height: 12),
+              companiesAsync.when(
+                data: (companies) => _dropdown(
+                  'Company', 
+                  _companyId, 
+                  companies.map((c) => {'id': c.id, 'name': c.companyName}).toList(), 
+                  (v) {
+                    debugPrint('Company selected: $v');
+                    setState(() => _companyId = v);
+                  }, 
+                  required: true
+                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, _) => Text('Error loading companies: $err'),
+              ),
+              const SizedBox(height: 16),
               deptsAsync.when(
                 data: (depts) => _dropdown(
                   'Department', 
@@ -120,7 +156,7 @@ class _RegistrationScreenState extends ConsumerState<RegistrationScreen> {
               const SizedBox(height: 32),
               PrimaryButton(
                 text: 'Submit Registration',
-                onPressed: _submit,
+                onPressed: loading || _companyId == null || _deptId == null ? null : _submit,
                 isLoading: loading,
                 icon: Icons.check_circle_outline_rounded,
               ),

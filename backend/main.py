@@ -42,7 +42,7 @@ def startup_event():
     db: Session = SessionLocal()
     try:
         # Check if demo data needs to be seeded
-        company = db.query(Company).filter(Company.name == "Demo Company").first()
+        company = db.query(Company).filter(Company.company_name == "Demo Company").first()
         if not company:
             company = Company(
                 id="demo_company",

@@ -29,20 +29,50 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
       body: Column(
         children: [
           // Summary Card
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.surface, borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-              _summaryItem('Days', '24', AppColors.primary),
-              _divider(),
-              _summaryItem('Hours', '208', AppColors.success),
-              _divider(),
-              _summaryItem('Overtime', '12h', AppColors.secondary),
-            ]),
+          historyAsync.when(
+            data: (history) {
+              final days = history.length;
+              // Just a naive calculation for demonstration:
+              // Real implementation would calculate from actual timestamps.
+              final hours = days * 8; 
+              final overtime = 0; 
+              
+              if (history.isEmpty) {
+                return Container(
+                  margin: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface, borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+                    _summaryItem('Days', '--', AppColors.primary),
+                    _divider(),
+                    _summaryItem('Hours', '--', AppColors.success),
+                    _divider(),
+                    _summaryItem('Overtime', '--', AppColors.secondary),
+                  ]),
+                );
+              }
+              
+              return Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface, borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+                  _summaryItem('Days', '$days', AppColors.primary),
+                  _divider(),
+                  _summaryItem('Hours', '$hours', AppColors.success),
+                  _divider(),
+                  _summaryItem('Overtime', '${overtime}h', AppColors.secondary),
+                ]),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => const SizedBox(),
           ),
           // Filter Chips
           SizedBox(

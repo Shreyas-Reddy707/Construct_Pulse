@@ -12,6 +12,7 @@ class ApiEndpoints {
 
   // ── Companies (V1.1) ─────────────────────────────────────
   static const String companies = '/companies';
+  static const String publicCompanies = '/public/companies';
   static String company(String id) => '/companies/$id';
 
   // ── Users (V1.1) ─────────────────────────────────────────
@@ -23,10 +24,12 @@ class ApiEndpoints {
 
   // ── Departments (V1.1) ───────────────────────────────────
   static const String departments = '/departments';
+  static const String publicDepartments = '/public/departments';
   static String department(String id) => '/departments/$id';
 
   // ── Contractors (V1.1) ───────────────────────────────────
   static const String contractors = '/contractors';
+  static const String publicContractors = '/public/contractors';
   static String contractor(String id) => '/contractors/$id';
 
   // ── Sites (V1.2) ─────────────────────────────────────────

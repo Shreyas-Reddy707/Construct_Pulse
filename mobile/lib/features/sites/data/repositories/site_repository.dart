@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_client.dart';
@@ -36,7 +37,8 @@ class SiteRepository {
   Future<String> getSiteQr(String siteId) async {
     try {
       final response = await _dio.get(ApiEndpoints.siteQr(siteId));
-      return response.data['qr_token']; // Return string to generate QR
+      final qrToken = response.data['qr_token'];
+      return jsonEncode({'site_id': siteId, 'qr_token': qrToken});
     } on DioException catch (e) {
       throw mapDioException(e);
     }
@@ -53,6 +55,17 @@ class SiteRepository {
   Future<void> updateSite(String siteId, Map<String, dynamic> data) async {
     try {
       await _dio.put(ApiEndpoints.site(siteId), data: data);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  Future<void> assignWorker(String siteId, String workerId) async {
+    try {
+      await _dio.post(
+        '${ApiEndpoints.sites}/$siteId/assign-worker',
+        data: {'worker_id': workerId},
+      );
     } on DioException catch (e) {
       throw mapDioException(e);
     }

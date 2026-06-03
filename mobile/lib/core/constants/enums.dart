@@ -1,13 +1,13 @@
 // All enumerations as defined in the Master Spec §65
 
 enum UserRole {
-  worker('worker', 'Worker'),
-  contractor('contractor', 'Contractor'),
-  siteEngineer('site_engineer', 'Site Engineer'),
-  siteManager('site_manager', 'Site Manager'),
-  admin('admin', 'Admin'),
-  superAdmin('super_admin', 'Super Admin'),
-  municipalityInspector('municipality_inspector', 'Municipality Inspector');
+  worker('Worker', 'Worker'),
+  contractor('Contractor', 'Contractor'),
+  siteEngineer('Site Engineer', 'Site Engineer'),
+  siteManager('Supervisor', 'Site Manager'),
+  admin('Company Admin', 'Admin'),
+  superAdmin('System Admin', 'Super Admin'),
+  municipalityInspector('Municipality Officer', 'Municipality Inspector');
 
   const UserRole(this.value, this.label);
   final String value;

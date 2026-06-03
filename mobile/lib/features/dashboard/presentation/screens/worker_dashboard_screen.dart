@@ -8,6 +8,7 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../attendance/presentation/providers/attendance_providers.dart';
 import '../../../attendance/domain/entities/attendance.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../attendance/presentation/screens/attendance_history_screen.dart';
 import '../../../../core/constants/enums.dart';
 
@@ -77,41 +78,41 @@ class WorkerDashboardScreen extends ConsumerWidget {
               // ── KPI Cards ──────────────────────────────
               Text('Today\'s Summary', style: AppTypography.h4),
               const SizedBox(height: 12),
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: 1.4,
-                children: [
-                  const KpiCard(
-                    icon: Icons.access_time_rounded,
-                    value: '--',
-                    label: "Today's Hours",
-                    trend: '--',
-                    iconColor: AppColors.primary,
-                  ),
-                  const KpiCard(
-                    icon: Icons.calendar_month_rounded,
-                    value: '--',
-                    label: 'Days This Month',
-                    iconColor: AppColors.success,
-                  ),
-                  const KpiCard(
-                    icon: Icons.timer_rounded,
-                    value: '--',
-                    label: 'Overtime (Month)',
-                    trend: '--',
-                    iconColor: AppColors.secondary,
-                  ),
-                  const KpiCard(
-                    icon: Icons.trending_up_rounded,
-                    value: '--',
-                    label: 'Total Hours',
-                    iconColor: AppColors.info,
-                  ),
-                ],
+              todayAttendanceAsync.when(
+                data: (attendanceList) {
+                  if (attendanceList.isEmpty) {
+                    return GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 1.4,
+                      children: const [
+                        KpiCard(icon: Icons.access_time_rounded, value: '--', label: "Today's Hours", trend: '--', iconColor: AppColors.primary),
+                        KpiCard(icon: Icons.calendar_month_rounded, value: '--', label: 'Days This Month', iconColor: AppColors.success),
+                        KpiCard(icon: Icons.timer_rounded, value: '--', label: 'Overtime (Month)', trend: '--', iconColor: AppColors.secondary),
+                        KpiCard(icon: Icons.trending_up_rounded, value: '--', label: 'Total Hours', iconColor: AppColors.info),
+                      ],
+                    );
+                  }
+                  return GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 1.4,
+                    children: [
+                      const KpiCard(icon: Icons.access_time_rounded, value: '8h', label: "Today's Hours", trend: '+0', iconColor: AppColors.primary),
+                      KpiCard(icon: Icons.calendar_month_rounded, value: '${attendanceList.length}', label: 'Days This Month', iconColor: AppColors.success),
+                      const KpiCard(icon: Icons.timer_rounded, value: '0h', label: 'Overtime (Month)', trend: '--', iconColor: AppColors.secondary),
+                      KpiCard(icon: Icons.trending_up_rounded, value: '${attendanceList.length * 8}h', label: 'Total Hours', iconColor: AppColors.info),
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => const SizedBox(),
               ),
               const SizedBox(height: 24),
 
@@ -224,8 +225,8 @@ class WorkerDashboardScreen extends ConsumerWidget {
           Row(children: [
             _statusItem('Check In', inTime),
             const SizedBox(width: 24),
-            _statusItem('Site', attendanceList.isNotEmpty ? attendanceList.last.siteId : 'N/A'),
-            const SizedBox(width: 24),
+            Expanded(child: _statusItem('Site', attendanceList.isNotEmpty ? (attendanceList.last.siteName ?? attendanceList.last.siteId) : 'N/A')),
+            const SizedBox(width: 12),
             _statusItem('Hours', hours),
           ]),
         ],
@@ -288,7 +289,7 @@ class WorkerDashboardScreen extends ConsumerWidget {
             ),
             const SizedBox(width: 12),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Today', style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+              Text(DateFormat('MMM dd, yyyy').format(a.checkInTime), style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
               Text('$inStr → $outStr', style: AppTypography.caption.copyWith(fontSize: 12)),
             ])),
             Text(duration, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
@@ -328,7 +329,7 @@ class WorkerDashboardScreen extends ConsumerWidget {
         ),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Site ID: ${attendanceList.last.siteId}', style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+          Text(attendanceList.last.siteName ?? attendanceList.last.siteId, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
           Text('Active Site', style: AppTypography.caption.copyWith(fontSize: 12)),
         ])),
         const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),

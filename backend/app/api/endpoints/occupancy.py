@@ -9,11 +9,14 @@ from app.api.deps import get_current_user
 
 router = APIRouter()
 
-def compute_occupancy(site_id: str, db: Session):
-    active_attendances = db.query(Attendance).filter(
+def compute_occupancy(site_id: str, db: Session, company_id: str | None = None):
+    query = db.query(Attendance).filter(
         Attendance.site_id == site_id,
         Attendance.status == AttendanceStatus.CHECKED_IN
-    ).all()
+    )
+    if company_id:
+        query = query.filter(Attendance.company_id == company_id)
+    active_attendances = query.all()
     
     total = len(active_attendances)
     dept_breakdown = {}
@@ -44,26 +47,46 @@ def compute_occupancy(site_id: str, db: Session):
 
 @router.get("/current", response_model=List[schemas.OccupancyResponse])
 def get_current_occupancy(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    sites = db.query(Site).all()
+    query = db.query(Site)
+    if current_user.company_id:
+        query = query.filter(Site.company_id == current_user.company_id)
+    sites = query.all()
+    
     results = []
     for site in sites:
-        occ = compute_occupancy(site.id, db)
+        occ = compute_occupancy(site.id, db, current_user.company_id)
         results.append(occ)
     return results
 
 @router.get("/site/{site_id}", response_model=schemas.OccupancyResponse)
 def get_site_occupancy(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    site = db.query(Site).filter(Site.id == site_id).first()
+    query = db.query(Site).filter(Site.id == site_id)
+    if current_user.company_id:
+        query = query.filter(Site.company_id == current_user.company_id)
+    site = query.first()
+    
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
-    return compute_occupancy(site_id, db)
+    return compute_occupancy(site_id, db, current_user.company_id)
 
 @router.get("/departments/{site_id}")
 def get_departments_occupancy(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    occ = compute_occupancy(site_id, db)
+    query = db.query(Site).filter(Site.id == site_id)
+    if current_user.company_id:
+        query = query.filter(Site.company_id == current_user.company_id)
+    if not query.first():
+        raise HTTPException(status_code=404, detail="Site not found")
+        
+    occ = compute_occupancy(site_id, db, current_user.company_id)
     return occ["department_breakdown"]
 
 @router.get("/contractors/{site_id}")
 def get_contractors_occupancy(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    occ = compute_occupancy(site_id, db)
+    query = db.query(Site).filter(Site.id == site_id)
+    if current_user.company_id:
+        query = query.filter(Site.company_id == current_user.company_id)
+    if not query.first():
+        raise HTTPException(status_code=404, detail="Site not found")
+        
+    occ = compute_occupancy(site_id, db, current_user.company_id)
     return occ["contractor_breakdown"]

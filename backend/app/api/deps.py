@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.db.database import get_db
-from app.models.models import User, UserRole
+from app.models.models import User, UserRole, WorkerStatus
 
 oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login"
@@ -28,7 +28,7 @@ def get_current_user(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if not user.is_active:
+    if user.status != WorkerStatus.APPROVED:
         raise HTTPException(status_code=400, detail="Inactive user")
     return user
 

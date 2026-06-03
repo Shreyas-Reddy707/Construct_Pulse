@@ -5,6 +5,12 @@ from app.db.database import Base
 import uuid
 import enum
 
+class WorkerStatus(str, enum.Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    SUSPENDED = "suspended"
+
 class UserRole(str, enum.Enum):
     WORKER = "Worker"
     SUPERVISOR = "Supervisor"
@@ -39,11 +45,12 @@ contractor_to_site = Table(
 
 class Company(Base):
     __tablename__ = "companies"
-    __table_args__ = (UniqueConstraint('name', name='uq_company_name'),)
+    __table_args__ = (UniqueConstraint('company_name', name='uq_company_name'),)
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    name = Column(String, index=True, nullable=False)
-    address = Column(String)
-    phone = Column(String)
+    company_name = Column(String, index=True, nullable=False)
+    registration_number = Column(String)
+    contact_email = Column(String)
+    contact_phone = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     departments = relationship("Department", back_populates="company")
@@ -86,6 +93,7 @@ class User(Base):
     department_id = Column(String, ForeignKey("departments.id"), nullable=True)
     contractor_id = Column(String, ForeignKey("contractors.id"), nullable=True)
     is_active = Column(Boolean, default=True)
+    status = Column(Enum(WorkerStatus), default=WorkerStatus.PENDING)
 
     company = relationship("Company", back_populates="users")
     department = relationship("Department", back_populates="users")
@@ -95,6 +103,7 @@ class User(Base):
 
 class Site(Base):
     __tablename__ = "sites"
+    __table_args__ = (UniqueConstraint('company_id', 'name', name='uq_company_site_name'),)
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     company_id = Column(String, ForeignKey("companies.id"))
     name = Column(String, nullable=False)
@@ -132,6 +141,7 @@ class Attendance(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id"))
     site_id = Column(String, ForeignKey("sites.id"))
+    company_id = Column(String, ForeignKey("companies.id"), nullable=True)
     check_in_time = Column(DateTime(timezone=True), server_default=func.now())
     check_out_time = Column(DateTime(timezone=True), nullable=True)
     gps_latitude = Column(Float, nullable=True)
@@ -140,6 +150,10 @@ class Attendance(Base):
 
     user = relationship("User", back_populates="attendances")
     site = relationship("Site", back_populates="attendances")
+
+    @property
+    def site_name(self) -> str | None:
+        return self.site.name if self.site else None
 
 class OccupancySnapshot(Base):
     __tablename__ = "occupancy_snapshots"

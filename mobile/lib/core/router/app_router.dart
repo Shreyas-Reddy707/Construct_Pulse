@@ -16,13 +16,15 @@ import '../../features/company/presentation/screens/departments_list_screen.dart
 import '../../features/company/presentation/screens/contractors_list_screen.dart';
 import '../../features/sites/presentation/screens/site_detail_screen.dart';
 import '../../features/sites/presentation/screens/site_qr_screen.dart';
+import '../../features/sites/presentation/screens/site_create_screen.dart';
 import '../../features/sites/presentation/screens/sites_list_screen.dart';
+import '../../features/workforce/presentation/screens/pending_workers_screen.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 
 class RouterNotifier extends ChangeNotifier {
   final Ref ref;
   RouterNotifier(this.ref) {
-    ref.listen(authProvider, (_, __) => notifyListeners());
+    ref.listen(authProvider.select((state) => state.status), (_, __) => notifyListeners());
   }
 }
 
@@ -56,12 +58,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/contractors', builder: (_, __) => const ContractorsListScreen()),
       GoRoute(path: '/sites', builder: (_, __) => const SitesListScreen()),
       GoRoute(
+        path: '/sites/create',
+        builder: (_, __) => const SiteCreateScreen(),
+      ),
+      GoRoute(
         path: '/sites/:id',
         builder: (_, state) => SiteDetailScreen(siteId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: '/sites/:id/qr',
         builder: (_, state) => SiteQrScreen(siteId: state.pathParameters['id']!),
+      ),
+      GoRoute(
+        path: '/pending-workers',
+        builder: (_, __) => const PendingWorkersScreen(),
       ),
     ],
   );

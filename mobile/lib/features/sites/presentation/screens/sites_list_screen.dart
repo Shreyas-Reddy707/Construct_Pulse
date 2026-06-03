@@ -5,6 +5,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/common_widgets.dart';
 import '../providers/site_providers.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 /// Sites List Screen (Spec §78)
 class SitesListScreen extends ConsumerWidget {
@@ -12,6 +13,7 @@ class SitesListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider).user;
     final sitesAsync = ref.watch(sitesProvider);
 
     return Scaffold(
@@ -19,9 +21,10 @@ class SitesListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Sites'),
         actions: [
-          IconButton(icon: const Icon(Icons.add_rounded), onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Site management available in admin version')));
-          }),
+          if (user?.isAdmin ?? false)
+            IconButton(icon: const Icon(Icons.add_rounded), onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Site management available in admin version')));
+            }),
         ],
       ),
       body: Column(

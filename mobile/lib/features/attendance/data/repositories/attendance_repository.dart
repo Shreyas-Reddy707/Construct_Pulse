@@ -14,14 +14,15 @@ class AttendanceRepository {
 
   AttendanceRepository(this._dio);
 
-  Future<Attendance> checkIn(String siteId, {double? lat, double? lng}) async {
+  Future<Attendance> checkIn(String siteId, String qrToken, {double? lat, double? lng}) async {
     try {
       final response = await _dio.post(
         ApiEndpoints.checkIn,
         data: {
           'site_id': siteId,
-          if (lat != null) 'latitude': lat,
-          if (lng != null) 'longitude': lng,
+          'qr_token': qrToken,
+          if (lat != null) 'gps_latitude': lat,
+          if (lng != null) 'gps_longitude': lng,
         },
       );
       return Attendance.fromJson(response.data);
@@ -30,14 +31,15 @@ class AttendanceRepository {
     }
   }
 
-  Future<Attendance> checkOut(String siteId, {double? lat, double? lng}) async {
+  Future<Attendance> checkOut(String siteId, String qrToken, {double? lat, double? lng}) async {
     try {
       final response = await _dio.post(
         ApiEndpoints.checkOut,
         data: {
           'site_id': siteId,
-          if (lat != null) 'latitude': lat,
-          if (lng != null) 'longitude': lng,
+          'qr_token': qrToken,
+          if (lat != null) 'gps_latitude': lat,
+          if (lng != null) 'gps_longitude': lng,
         },
       );
       return Attendance.fromJson(response.data);

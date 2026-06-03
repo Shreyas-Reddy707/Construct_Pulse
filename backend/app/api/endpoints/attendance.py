@@ -27,6 +27,10 @@ def check_in(checkin_data: schemas.AttendanceCheckIn, db: Session = Depends(get_
     site = db.query(Site).filter(Site.id == checkin_data.site_id).first()
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
+        
+    # Verify worker belongs to company
+    if site.company_id and current_user.company_id and site.company_id != current_user.company_id:
+        raise HTTPException(status_code=403, detail="Worker does not belong to the site's company")
     
     # Verify worker assigned
     if not any(w.id == current_user.id for w in site.assigned_workers):
@@ -55,6 +59,7 @@ def check_in(checkin_data: schemas.AttendanceCheckIn, db: Session = Depends(get_
     attendance = Attendance(
         user_id=current_user.id,
         site_id=site.id,
+        company_id=current_user.company_id,
         gps_latitude=checkin_data.gps_latitude,
         gps_longitude=checkin_data.gps_longitude,
         status=AttendanceStatus.CHECKED_IN
@@ -91,8 +96,14 @@ def check_out(checkout_data: schemas.AttendanceCheckOut, db: Session = Depends(g
 
 @router.get("/worker/{worker_id}", response_model=List[schemas.AttendanceResponse])
 def get_worker_attendance(worker_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return db.query(Attendance).filter(Attendance.user_id == worker_id).all()
+    query = db.query(Attendance).filter(Attendance.user_id == worker_id)
+    if current_user.company_id:
+        query = query.filter(Attendance.company_id == current_user.company_id)
+    return query.all()
 
 @router.get("/site/{site_id}", response_model=List[schemas.AttendanceResponse])
 def get_site_attendance(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return db.query(Attendance).filter(Attendance.site_id == site_id).all()
+    query = db.query(Attendance).filter(Attendance.site_id == site_id)
+    if current_user.company_id:
+        query = query.filter(Attendance.company_id == current_user.company_id)
+    return query.all()

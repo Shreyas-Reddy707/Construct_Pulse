@@ -9,7 +9,7 @@ from app.api.deps import get_current_user, RoleChecker
 router = APIRouter()
 
 @router.get("/", response_model=List[schemas.CompanyResponse])
-def read_companies(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def read_companies(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     companies = db.query(Company).offset(skip).limit(limit).all()
     return companies
 

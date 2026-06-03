@@ -16,7 +16,36 @@ class CompanyRepository {
 
   CompanyRepository(this._dio);
 
-  // ── Companies ────────────────────────────────────────────────
+  Future<List<Department>> getPublicDepartments() async {
+    try {
+      final response = await _dio.get(ApiEndpoints.publicDepartments);
+      final data = response.data as List;
+      return data.map((json) => Department.fromJson(json)).toList();
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  Future<List<Contractor>> getPublicContractors() async {
+    try {
+      final response = await _dio.get(ApiEndpoints.publicContractors);
+      final data = response.data as List;
+      return data.map((json) => Contractor.fromJson(json)).toList();
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  Future<List<Company>> getPublicCompanies() async {
+    try {
+      final response = await _dio.get(ApiEndpoints.publicCompanies);
+      final data = response.data as List;
+      return data.map((json) => Company.fromJson(json)).toList();
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
   Future<List<Company>> getCompanies() async {
     try {
       final response = await _dio.get(ApiEndpoints.companies);

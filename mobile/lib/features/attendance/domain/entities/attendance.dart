@@ -5,6 +5,7 @@ class Attendance extends Equatable {
   final String id;
   final String userId;
   final String siteId;
+  final String? siteName;
   final DateTime checkInTime;
   final DateTime? checkOutTime;
   final AttendanceStatus status;
@@ -13,6 +14,7 @@ class Attendance extends Equatable {
     required this.id,
     required this.userId,
     required this.siteId,
+    this.siteName,
     required this.checkInTime,
     this.checkOutTime,
     required this.status,
@@ -23,6 +25,7 @@ class Attendance extends Equatable {
       id: json['id'] as String,
       userId: json['user_id'] as String,
       siteId: json['site_id'] as String,
+      siteName: json['site_name'] as String?,
       checkInTime: DateTime.parse(json['check_in_time'] as String),
       checkOutTime: json['check_out_time'] != null
           ? DateTime.parse(json['check_out_time'] as String)
@@ -36,6 +39,7 @@ class Attendance extends Equatable {
       'id': id,
       'user_id': userId,
       'site_id': siteId,
+      if (siteName != null) 'site_name': siteName,
       'check_in_time': checkInTime.toIso8601String(),
       'check_out_time': checkOutTime?.toIso8601String(),
       'status': status.value,
@@ -47,6 +51,7 @@ class Attendance extends Equatable {
         id,
         userId,
         siteId,
+        siteName,
         checkInTime,
         checkOutTime,
         status,

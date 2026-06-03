@@ -42,17 +42,47 @@ class WorkerRepository {
     }
   }
 
-  Future<void> approveWorker(String userId) async {
+  Future<List<User>> getPendingWorkers() async {
     try {
-      await _dio.post('${ApiEndpoints.users}/$userId/approve');
+      final response = await _dio.get('${ApiEndpoints.users}/pending');
+      final data = response.data as List;
+      return data.map((json) => User.fromJson(json)).toList();
     } on DioException catch (e) {
       throw mapDioException(e);
     }
   }
 
-  Future<void> suspendWorker(String userId) async {
+  Future<User> approveWorker(String userId) async {
     try {
-      await _dio.post('${ApiEndpoints.users}/$userId/suspend');
+      final response = await _dio.put('${ApiEndpoints.users}/$userId/approve');
+      return User.fromJson(response.data);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  Future<User> rejectWorker(String userId) async {
+    try {
+      final response = await _dio.put('${ApiEndpoints.users}/$userId/reject');
+      return User.fromJson(response.data);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  Future<User> suspendWorker(String userId) async {
+    try {
+      final response = await _dio.put('${ApiEndpoints.users}/$userId/suspend');
+      return User.fromJson(response.data);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  Future<User> reactivateWorker(String userId) async {
+    try {
+      final response = await _dio.put('${ApiEndpoints.users}/$userId/reactivate');
+      return User.fromJson(response.data);
     } on DioException catch (e) {
       throw mapDioException(e);
     }

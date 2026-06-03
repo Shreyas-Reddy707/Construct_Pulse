@@ -2,39 +2,43 @@ import 'package:equatable/equatable.dart';
 
 class Company extends Equatable {
   final String id;
+  final String companyName;
   final String name;
-  final String? logoUrl;
-  final String? address;
-  final String? phone;
+  final String? registrationNumber;
+  final String? contactEmail;
+  final String? contactPhone;
 
   const Company({
     required this.id,
+    required this.companyName,
     required this.name,
-    this.logoUrl,
-    this.address,
-    this.phone,
+    this.registrationNumber,
+    this.contactEmail,
+    this.contactPhone,
   });
 
   factory Company.fromJson(Map<String, dynamic> json) {
     return Company(
       id: json['id'] as String,
-      name: json['name'] as String,
-      logoUrl: json['logo_url'] as String?,
-      address: json['address'] as String?,
-      phone: json['phone'] as String?,
+      name: json['company_name'] as String? ?? 'Unknown',
+      companyName: json['company_name'] as String? ?? 'Unknown',
+      registrationNumber: json['registration_number'] as String?,
+      contactEmail: json['contact_email'] as String?,
+      contactPhone: json['contact_phone'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'name': name,
-      'logo_url': logoUrl,
-      'address': address,
-      'phone': phone,
+      'company_name': companyName,
+      'name': companyName,
+      'registration_number': registrationNumber,
+      'contact_email': contactEmail,
+      'contact_phone': contactPhone,
     };
   }
 
   @override
-  List<Object?> get props => [id, name, logoUrl, address, phone];
+  List<Object?> get props => [id, companyName, registrationNumber, contactEmail, contactPhone];
 }

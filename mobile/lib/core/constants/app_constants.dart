@@ -8,7 +8,7 @@ class AppConstants {
   static const String appTagline = 'Workforce Intelligence Platform';
 
   /// Development authentication mode (bypasses Firebase SMS billing)
-  static const bool demoAuth = false;
+  static const bool demoAuth = true;
 
   // ── API ───────────────────────────────────────────────────
   static const String baseUrl = 'http://127.0.0.1:8000/api/v1';

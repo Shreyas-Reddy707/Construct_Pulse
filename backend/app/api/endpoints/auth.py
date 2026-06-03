@@ -11,7 +11,7 @@ router = APIRouter()
 import os
 from pydantic import BaseModel
 from typing import Optional
-from app.models.models import UserRole
+from app.models.models import UserRole, WorkerStatus
 
 DEMO_AUTH = os.getenv("DEMO_AUTH", "false").lower() == "true"
 
@@ -40,6 +40,7 @@ class RegisterWorkerRequest(BaseModel):
     first_name: str
     last_name: str
     phone: str
+    company_id: str
     department_id: str
     contractor_id: Optional[str] = None
     designation: str
@@ -60,9 +61,11 @@ def register_worker(request: RegisterWorkerRequest, db: Session = Depends(get_db
         phone_number=request.phone,
         role=UserRole.WORKER,
         firebase_uid=firebase_uid,
+        company_id=request.company_id,
         department_id=request.department_id,
         contractor_id=request.contractor_id,
-        is_active=True if DEMO_AUTH else False
+        is_active=True if DEMO_AUTH else False,
+        status=WorkerStatus.APPROVED if DEMO_AUTH else WorkerStatus.PENDING
     )
     db.add(new_user)
     db.commit()

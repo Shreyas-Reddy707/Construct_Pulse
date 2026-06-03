@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
-from app.models.models import UserRole
+from app.models.models import UserRole, WorkerStatus
 
 class Token(BaseModel):
     access_token: str
@@ -25,6 +25,7 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: str
     is_active: bool
+    status: WorkerStatus
     company_id: Optional[str] = None
     department_id: Optional[str] = None
     contractor_id: Optional[str] = None
@@ -33,9 +34,10 @@ class UserResponse(UserBase):
         from_attributes = True
 
 class CompanyBase(BaseModel):
-    name: str
-    address: Optional[str] = None
-    phone: Optional[str] = None
+    company_name: str
+    registration_number: Optional[str] = None
+    contact_email: Optional[str] = None
+    contact_phone: Optional[str] = None
 
 class CompanyCreate(CompanyBase):
     pass
@@ -140,6 +142,7 @@ class AttendanceResponse(BaseModel):
     id: str
     user_id: str
     site_id: str
+    site_name: Optional[str] = None
     check_in_time: datetime
     check_out_time: Optional[datetime] = None
     gps_latitude: Optional[float] = None

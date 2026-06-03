@@ -37,8 +37,8 @@ class CompaniesListScreen extends ConsumerWidget {
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
-                  title: Text(company.name, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
-                  subtitle: Text('${company.address ?? "No address"} • ${company.phone}', style: AppTypography.caption),
+                  title: Text(company.companyName, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+                  subtitle: Text('${company.contactEmail ?? "No email"} • ${company.contactPhone ?? "No phone"}', style: AppTypography.caption),
                   trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
                   onTap: () {
                     // Navigate to company detail

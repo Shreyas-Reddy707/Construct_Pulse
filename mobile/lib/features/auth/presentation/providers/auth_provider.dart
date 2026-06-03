@@ -217,6 +217,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> register({
     required String firstName,
     required String lastName,
+    required String companyId,
     required String departmentId,
     String? contractorId,
     required String designation,
@@ -229,6 +230,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         firstName: firstName,
         lastName: lastName,
         phone: state.phone!,
+        companyId: companyId,
         departmentId: departmentId,
         contractorId: contractorId,
         designation: designation,

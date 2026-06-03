@@ -29,7 +29,7 @@ void main() {
 
   group('AttendanceRepository', () {
     test('checkIn handles exceptions gracefully', () async {
-      expect(() => repository.checkIn('site1', lat: 10.0, lng: 10.0), throwsA(isA<AppException>()));
+      expect(() => repository.checkIn('site123', 'token123', lat: 10.0, lng: 10.0), throwsA(isA<AppException>()));
     });
   });
 }
