@@ -4,6 +4,7 @@ import '../../../../core/constants/enums.dart';
 class Attendance extends Equatable {
   final String id;
   final String userId;
+  final String? userName;
   final String siteId;
   final String? siteName;
   final DateTime checkInTime;
@@ -13,6 +14,7 @@ class Attendance extends Equatable {
   const Attendance({
     required this.id,
     required this.userId,
+    this.userName,
     required this.siteId,
     this.siteName,
     required this.checkInTime,
@@ -24,6 +26,7 @@ class Attendance extends Equatable {
     return Attendance(
       id: json['id'] as String,
       userId: json['user_id'] as String,
+      userName: json['user_name'] as String?,
       siteId: json['site_id'] as String,
       siteName: json['site_name'] as String?,
       checkInTime: DateTime.parse(json['check_in_time'] as String),
@@ -38,6 +41,7 @@ class Attendance extends Equatable {
     return {
       'id': id,
       'user_id': userId,
+      if (userName != null) 'user_name': userName,
       'site_id': siteId,
       if (siteName != null) 'site_name': siteName,
       'check_in_time': checkInTime.toIso8601String(),
@@ -50,6 +54,7 @@ class Attendance extends Equatable {
   List<Object?> get props => [
         id,
         userId,
+        userName,
         siteId,
         siteName,
         checkInTime,

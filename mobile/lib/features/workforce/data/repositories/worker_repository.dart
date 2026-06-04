@@ -4,6 +4,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../../auth/domain/entities/user.dart';
+import '../../../sites/domain/entities/site.dart';
 
 final workerRepositoryProvider = Provider<WorkerRepository>((ref) {
   return WorkerRepository(ref.read(dioProvider));
@@ -37,6 +38,16 @@ class WorkerRepository {
     try {
       final response = await _dio.get('${ApiEndpoints.users}/$userId');
       return User.fromJson(response.data);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  Future<List<Site>> getWorkerSites(String userId) async {
+    try {
+      final response = await _dio.get('${ApiEndpoints.users}/$userId/sites');
+      final data = response.data as List;
+      return data.map((json) => Site.fromJson(json)).toList();
     } on DioException catch (e) {
       throw mapDioException(e);
     }

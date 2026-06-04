@@ -11,3 +11,8 @@ final workerDetailProvider = FutureProvider.family<User, String>((ref, userId) a
   final repository = ref.read(workerRepositoryProvider);
   return repository.getWorker(userId);
 });
+
+final workerSitesProvider = FutureProvider.family<List<dynamic>, String>((ref, userId) async {
+  final repository = ref.read(workerRepositoryProvider);
+  return repository.getWorkerSites(userId);
+});

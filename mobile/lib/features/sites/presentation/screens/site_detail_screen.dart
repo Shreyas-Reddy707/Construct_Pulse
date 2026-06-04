@@ -111,10 +111,13 @@ class SiteDetailScreen extends ConsumerWidget {
   void _showAssignWorkerDialog(BuildContext context, WidgetRef ref) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Consumer(
         builder: (context, ref, child) {
           final workersAsync = ref.watch(workersListProvider(null));
+          final assignmentsAsync = ref.watch(siteAssignmentsProvider(siteId));
           final actionState = ref.watch(siteActionNotifierProvider);
 
           return Container(
@@ -126,30 +129,48 @@ class SiteDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 16),
                 Expanded(
                   child: workersAsync.when(
-                    data: (workers) {
-                      return ListView.builder(
-                        itemCount: workers.length,
-                        itemBuilder: (context, index) {
-                          final worker = workers[index];
-                          return ListTile(
-                            title: Text('${worker.firstName} ${worker.lastName}'),
-                            subtitle: Text(worker.phone),
-                            trailing: actionState.isLoading
-                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                                : TextButton(
-                                    onPressed: () async {
-                                      await ref.read(siteActionNotifierProvider.notifier).assignWorker(siteId, worker.id);
-                                      if (ctx.mounted) {
-                                        Navigator.pop(ctx);
-                                        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Worker assigned successfully'), backgroundColor: AppColors.success));
-                                      }
-                                    },
-                                    child: const Text('Assign'),
-                                  ),
-                          );
-                        },
-                      );
-                    },
+                    data: (workers) => assignmentsAsync.when(
+                      data: (assignments) {
+                        final assignedWorkersList = (assignments['workers'] as List?) ?? [];
+                        final assignedWorkerIds = assignedWorkersList.map((u) => u.id).toList();
+                        
+                        return ListView.builder(
+                          itemCount: workers.length,
+                          itemBuilder: (context, index) {
+                            final worker = workers[index];
+                            final isAssigned = assignedWorkerIds.contains(worker.id);
+                            
+                            return ListTile(
+                              title: Text(worker.fullName, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+                              subtitle: Text(worker.phone, style: AppTypography.caption),
+                              trailing: actionState.isLoading
+                                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                  : isAssigned 
+                                      ? TextButton(
+                                          onPressed: () async {
+                                            await ref.read(siteActionNotifierProvider.notifier).unassignWorker(siteId, worker.id);
+                                            if (ctx.mounted) {
+                                              ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Worker unassigned'), backgroundColor: AppColors.surfaceVariant));
+                                            }
+                                          },
+                                          child: const Text('Unassign', style: TextStyle(color: AppColors.danger)),
+                                        )
+                                      : TextButton(
+                                          onPressed: () async {
+                                            await ref.read(siteActionNotifierProvider.notifier).assignWorker(siteId, worker.id);
+                                            if (ctx.mounted) {
+                                              ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Worker assigned successfully'), backgroundColor: AppColors.success));
+                                            }
+                                          },
+                                          child: const Text('Assign'),
+                                        ),
+                            );
+                          },
+                        );
+                      },
+                      loading: () => const Center(child: CircularProgressIndicator()),
+                      error: (e, _) => Center(child: Text('Error loading assignments: $e')),
+                    ),
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (e, _) => Center(child: Text('Error: $e')),
                   ),

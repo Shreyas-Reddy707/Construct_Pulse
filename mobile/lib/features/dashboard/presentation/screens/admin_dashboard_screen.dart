@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
@@ -30,7 +31,7 @@ class AdminDashboardScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _header(),
+                _header(context),
                 const SizedBox(height: 24),
                 summaryAsync.when(
                   data: (data) => Column(
@@ -40,17 +41,37 @@ class AdminDashboardScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Expanded(child: KpiCard(label: 'Total Workers', value: data['total_workers'].toString(), icon: Icons.people_rounded, iconColor: AppColors.primary)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.push('/workforce'),
+                              child: KpiCard(label: 'Total Workers', value: data['total_workers'].toString(), icon: Icons.people_rounded, iconColor: AppColors.primary),
+                            )
+                          ),
                           const SizedBox(width: 12),
-                          Expanded(child: KpiCard(label: 'Pending', value: data['pending_workers'].toString(), icon: Icons.pending_actions_rounded, iconColor: AppColors.warning)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.push('/pending-workers'),
+                              child: KpiCard(label: 'Pending', value: data['pending_workers'].toString(), icon: Icons.pending_actions_rounded, iconColor: AppColors.warning),
+                            )
+                          ),
                         ],
                       ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Expanded(child: KpiCard(label: 'Approved', value: data['approved_workers'].toString(), icon: Icons.check_circle_rounded, iconColor: AppColors.success)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.push('/workforce?status=approved'),
+                              child: KpiCard(label: 'Approved', value: data['approved_workers'].toString(), icon: Icons.check_circle_rounded, iconColor: AppColors.success),
+                            )
+                          ),
                           const SizedBox(width: 12),
-                          Expanded(child: KpiCard(label: 'Suspended', value: data['suspended_workers'].toString(), icon: Icons.block_rounded, iconColor: AppColors.danger)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.push('/workforce?status=suspended'),
+                              child: KpiCard(label: 'Suspended', value: data['suspended_workers'].toString(), icon: Icons.block_rounded, iconColor: AppColors.danger),
+                            )
+                          ),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -58,9 +79,19 @@ class AdminDashboardScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Expanded(child: KpiCard(label: 'Checked In', value: data['checked_in_today'].toString(), icon: Icons.login_rounded, iconColor: AppColors.success)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.push('/attendance-live'),
+                              child: KpiCard(label: 'Checked In', value: data['checked_in_today'].toString(), icon: Icons.login_rounded, iconColor: AppColors.success),
+                            )
+                          ),
                           const SizedBox(width: 12),
-                          Expanded(child: KpiCard(label: 'Checked Out', value: data['checked_out_today'].toString(), icon: Icons.logout_rounded, iconColor: AppColors.surfaceVariant)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.push('/attendance-history'),
+                              child: KpiCard(label: 'Checked Out', value: data['checked_out_today'].toString(), icon: Icons.logout_rounded, iconColor: AppColors.surfaceVariant),
+                            )
+                          ),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -68,9 +99,19 @@ class AdminDashboardScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                       Row(
                         children: [
-                          Expanded(child: KpiCard(label: 'Active Sites', value: data['active_sites'].toString(), icon: Icons.location_on_rounded, iconColor: AppColors.secondary)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.push('/sites'),
+                              child: KpiCard(label: 'Active Sites', value: data['active_sites'].toString(), icon: Icons.location_on_rounded, iconColor: AppColors.secondary),
+                            )
+                          ),
                           const SizedBox(width: 12),
-                          Expanded(child: KpiCard(label: 'Workers On Site', value: data['workers_on_site'].toString(), icon: Icons.engineering_rounded, iconColor: AppColors.primaryDark)),
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.push('/occupancy'),
+                              child: KpiCard(label: 'Workers On Site', value: data['workers_on_site'].toString(), icon: Icons.engineering_rounded, iconColor: AppColors.primaryDark),
+                            )
+                          ),
                         ],
                       ),
                     ],
@@ -86,7 +127,7 @@ class AdminDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _header() {
+  Widget _header(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -97,6 +138,11 @@ class AdminDashboardScreen extends ConsumerWidget {
             const SizedBox(height: 4),
             Text('Platform Overview', style: AppTypography.body.copyWith(color: AppColors.textSecondary)),
           ],
+        ),
+        IconButton(
+          icon: const Icon(Icons.analytics_rounded, color: AppColors.primary),
+          onPressed: () => context.push('/analytics'),
+          tooltip: 'Analytics & Reporting',
         ),
       ],
     );

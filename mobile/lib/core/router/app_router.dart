@@ -19,6 +19,11 @@ import '../../features/sites/presentation/screens/site_qr_screen.dart';
 import '../../features/sites/presentation/screens/site_create_screen.dart';
 import '../../features/sites/presentation/screens/sites_list_screen.dart';
 import '../../features/workforce/presentation/screens/pending_workers_screen.dart';
+import '../../features/workforce/presentation/screens/workforce_directory_screen.dart';
+import '../../features/attendance/presentation/screens/live_attendance_screen.dart';
+import '../../features/attendance/presentation/screens/attendance_history_screen.dart';
+import '../../features/sites/presentation/screens/site_occupancy_screen.dart';
+import '../../features/dashboard/presentation/screens/analytics_screen.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 
 class RouterNotifier extends ChangeNotifier {
@@ -72,6 +77,26 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/pending-workers',
         builder: (_, __) => const PendingWorkersScreen(),
+      ),
+      GoRoute(
+        path: '/workforce',
+        builder: (_, state) => WorkforceDirectoryScreen(initialStatus: state.uri.queryParameters['status']),
+      ),
+      GoRoute(
+        path: '/attendance-live',
+        builder: (_, __) => const LiveAttendanceScreen(),
+      ),
+      GoRoute(
+        path: '/attendance-history',
+        builder: (_, __) => const AttendanceHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/occupancy',
+        builder: (_, __) => const SiteOccupancyScreen(),
+      ),
+      GoRoute(
+        path: '/analytics',
+        builder: (_, __) => const AnalyticsScreen(),
       ),
     ],
   );

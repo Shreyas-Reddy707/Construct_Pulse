@@ -18,6 +18,21 @@ final attendanceHistoryProvider = FutureProvider<List<Attendance>>((ref) async {
   return repository.getHistory(user.id);
 });
 
+final workerAttendanceHistoryProvider = FutureProvider.family<List<Attendance>, String>((ref, userId) async {
+  final repository = ref.read(attendanceRepositoryProvider);
+  return repository.getHistory(userId);
+});
+
+final liveAttendanceProvider = FutureProvider<List<Attendance>>((ref) async {
+  final repository = ref.read(attendanceRepositoryProvider);
+  return repository.getLiveAttendance();
+});
+
+final occupancyProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  final repository = ref.read(attendanceRepositoryProvider);
+  return repository.getSiteOccupancy();
+});
+
 class AttendanceNotifier extends StateNotifier<AsyncValue<void>> {
   final AttendanceRepository _repository;
 

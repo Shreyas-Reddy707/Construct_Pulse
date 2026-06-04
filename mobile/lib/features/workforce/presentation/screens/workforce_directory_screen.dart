@@ -8,7 +8,8 @@ import '../providers/worker_providers.dart';
 
 /// Worker List Screen (Workforce Directory)
 class WorkforceDirectoryScreen extends ConsumerStatefulWidget {
-  const WorkforceDirectoryScreen({super.key});
+  final String? initialStatus;
+  const WorkforceDirectoryScreen({super.key, this.initialStatus});
 
   @override
   ConsumerState<WorkforceDirectoryScreen> createState() => _WorkforceDirectoryScreenState();
@@ -16,6 +17,12 @@ class WorkforceDirectoryScreen extends ConsumerStatefulWidget {
 
 class _WorkforceDirectoryScreenState extends ConsumerState<WorkforceDirectoryScreen> {
   String? _statusFilter;
+
+  @override
+  void initState() {
+    super.initState();
+    _statusFilter = widget.initialStatus;
+  }
 
   @override
   Widget build(BuildContext context) {

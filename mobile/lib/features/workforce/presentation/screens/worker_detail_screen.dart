@@ -6,6 +6,9 @@ import '../../../../core/widgets/common_widgets.dart';
 import '../../../../core/widgets/buttons.dart';
 import '../providers/worker_providers.dart';
 import '../providers/pending_workers_provider.dart';
+import '../../../attendance/presentation/providers/attendance_providers.dart';
+import '../../../../core/constants/enums.dart';
+import 'package:intl/intl.dart';
 
 class WorkerDetailScreen extends ConsumerWidget {
   final String userId;
@@ -107,6 +110,40 @@ class WorkerDetailScreen extends ConsumerWidget {
                   ),
                 ),
               ],
+              const SizedBox(height: 24),
+              _buildSection('Assigned Sites', [
+                ref.watch(workerSitesProvider(userId)).when(
+                  data: (sites) => sites.isEmpty
+                      ? const Padding(padding: EdgeInsets.all(8.0), child: Text('No assigned sites'))
+                      : Column(
+                          children: sites.map((site) => ListTile(
+                            leading: const Icon(Icons.location_on_rounded, color: AppColors.secondary),
+                            title: Text(site.name),
+                            subtitle: Text(site.status ?? 'Active'),
+                          )).toList(),
+                        ),
+                  loading: () => const CircularProgressIndicator(),
+                  error: (e, _) => Text('Error: $e'),
+                )
+              ]),
+              const SizedBox(height: 16),
+              _buildSection('Recent Attendance', [
+                ref.watch(workerAttendanceHistoryProvider(userId)).when(
+                  data: (attendance) {
+                    if (attendance.isEmpty) return const Padding(padding: EdgeInsets.all(8.0), child: Text('No recent attendance'));
+                    final recent = attendance.take(5).toList();
+                    return Column(
+                      children: recent.map((a) => ListTile(
+                        leading: Icon(a.status == AttendanceStatus.checkedIn ? Icons.login_rounded : Icons.logout_rounded, color: a.status == AttendanceStatus.checkedIn ? AppColors.success : AppColors.surfaceVariant),
+                        title: Text(a.status == AttendanceStatus.checkedIn ? 'Checked In' : 'Checked Out'),
+                        subtitle: Text(DateFormat('MMM dd, yyyy - hh:mm a').format(a.checkInTime)),
+                      )).toList(),
+                    );
+                  },
+                  loading: () => const CircularProgressIndicator(),
+                  error: (e, _) => Text('Error: $e'),
+                )
+              ]),
             ],
           ),
         ),

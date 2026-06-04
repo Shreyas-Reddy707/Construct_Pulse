@@ -56,6 +56,9 @@ class ApiEndpoints {
   static const String attendanceHistory = '/attendance/history';
   static String siteAttendance(String siteId) => '/attendance/site/$siteId';
   static String userAttendance(String userId) => '/attendance/worker/$userId';
+  static String userAttendanceHistory(String userId) => '/attendance/history/$userId';
+  static const String liveAttendance = '/attendance/live';
+  static const String occupancy = '/attendance/occupancy';
   static const String attendanceSummary = '/attendance/summary';
   static String attendanceEvents(String attendanceId) =>
       '/attendance/$attendanceId/events';

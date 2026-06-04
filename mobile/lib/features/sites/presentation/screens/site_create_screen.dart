@@ -20,6 +20,7 @@ class _SiteCreateScreenState extends ConsumerState<SiteCreateScreen> {
   final _latController = TextEditingController();
   final _lngController = TextEditingController();
   final _radiusController = TextEditingController();
+  bool _enableGps = false;
 
   @override
   void dispose() {
@@ -35,14 +36,16 @@ class _SiteCreateScreenState extends ConsumerState<SiteCreateScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     try {
-      final data = {
+      final Map<String, dynamic> data = {
         'name': _nameController.text.trim(),
         'address': _addressController.text.trim(),
-        'latitude': double.parse(_latController.text.trim()),
-        'longitude': double.parse(_lngController.text.trim()),
-        'geofence_radius_meters': double.parse(_radiusController.text.trim()),
-        'company_id': 'dummy-company' // TODO: remove once company auth is linked
       };
+      
+      if (_enableGps) {
+        data['latitude'] = double.parse(_latController.text.trim());
+        data['longitude'] = double.parse(_lngController.text.trim());
+        data['geofence_radius_meters'] = double.parse(_radiusController.text.trim());
+      }
       
       await ref.read(siteActionNotifierProvider.notifier).createSite(data);
       if (mounted) {
@@ -87,34 +90,45 @@ class _SiteCreateScreenState extends ConsumerState<SiteCreateScreen> {
                 validator: (v) => v!.isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      decoration: const InputDecoration(labelText: 'Latitude', border: OutlineInputBorder()),
-                      controller: _latController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (v) => double.tryParse(v ?? '') == null ? 'Invalid' : null,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      decoration: const InputDecoration(labelText: 'Longitude', border: OutlineInputBorder()),
-                      controller: _lngController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      validator: (v) => double.tryParse(v ?? '') == null ? 'Invalid' : null,
-                    ),
-                  ),
-                ],
+              SwitchListTile(
+                title: const Text('Enable GPS Verification'),
+                subtitle: const Text('Require workers to be within geofence for QR attendance'),
+                value: _enableGps,
+                onChanged: (val) => setState(() => _enableGps = val),
+                contentPadding: EdgeInsets.zero,
+                activeTrackColor: AppColors.primary,
               ),
-              const SizedBox(height: 16),
-              TextFormField(
-                decoration: const InputDecoration(labelText: 'Geofence Radius (meters)', border: OutlineInputBorder()),
-                controller: _radiusController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                validator: (v) => double.tryParse(v ?? '') == null ? 'Invalid' : null,
-              ),
+              if (_enableGps) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        decoration: const InputDecoration(labelText: 'Latitude', border: OutlineInputBorder()),
+                        controller: _latController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (v) => _enableGps && double.tryParse(v ?? '') == null ? 'Invalid' : null,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextFormField(
+                        decoration: const InputDecoration(labelText: 'Longitude', border: OutlineInputBorder()),
+                        controller: _lngController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        validator: (v) => _enableGps && double.tryParse(v ?? '') == null ? 'Invalid' : null,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  decoration: const InputDecoration(labelText: 'Geofence Radius (meters)', border: OutlineInputBorder()),
+                  controller: _radiusController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  validator: (v) => _enableGps && double.tryParse(v ?? '') == null ? 'Invalid' : null,
+                ),
+              ],
               const SizedBox(height: 32),
               PrimaryButton(
                 text: 'Create Site',

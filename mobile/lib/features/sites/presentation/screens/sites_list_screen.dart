@@ -23,7 +23,7 @@ class SitesListScreen extends ConsumerWidget {
         actions: [
           if (user?.isAdmin ?? false)
             IconButton(icon: const Icon(Icons.add_rounded), onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Site management available in admin version')));
+              context.push('/sites/create');
             }),
         ],
       ),

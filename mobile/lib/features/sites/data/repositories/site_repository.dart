@@ -5,6 +5,7 @@ import '../../../../core/network/api_client.dart';
 import '../../../../core/constants/api_endpoints.dart';
 import '../../../../core/errors/exceptions.dart';
 import '../../domain/entities/site.dart';
+import '../../../auth/domain/entities/user.dart';
 
 final siteRepositoryProvider = Provider<SiteRepository>((ref) {
   return SiteRepository(ref.read(dioProvider));
@@ -43,6 +44,16 @@ class SiteRepository {
       throw mapDioException(e);
     }
   }
+
+  Future<String> generateSiteQr(String siteId) async {
+    try {
+      final response = await _dio.post('${ApiEndpoints.sites}/$siteId/generate-qr');
+      final qrToken = response.data['qr_token'];
+      return jsonEncode({'site_id': siteId, 'qr_token': qrToken});
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
   Future<String> createSite(Map<String, dynamic> data) async {
     try {
       final response = await _dio.post(ApiEndpoints.sites, data: data);
@@ -66,6 +77,31 @@ class SiteRepository {
         '${ApiEndpoints.sites}/$siteId/assign-worker',
         data: {'worker_id': workerId},
       );
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  Future<void> unassignWorker(String siteId, String workerId) async {
+    try {
+      await _dio.delete('${ApiEndpoints.sites}/$siteId/unassign-worker/$workerId');
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> getSiteAssignments(String siteId) async {
+    try {
+      final response = await _dio.get('${ApiEndpoints.sites}/$siteId/assignments');
+      final data = response.data as Map<String, dynamic>;
+      
+      final workersJson = data['workers'] as List? ?? [];
+      
+      return {
+        'workers': workersJson.map((json) => User.fromJson(json)).toList(),
+        'departments': data['departments'] ?? [],
+        'contractors': data['contractors'] ?? [],
+      };
     } on DioException catch (e) {
       throw mapDioException(e);
     }

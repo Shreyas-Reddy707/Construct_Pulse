@@ -59,7 +59,17 @@ class SiteQrScreen extends ConsumerWidget {
             );
           },
           loading: () => const CircularProgressIndicator(),
-          error: (error, stack) => Text('Error: $error'),
+          error: (error, stack) => Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text('QR Code not found or expired', style: TextStyle(color: Colors.red)),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => ref.read(siteActionNotifierProvider.notifier).generateQr(siteId),
+                child: const Text('Generate QR Code'),
+              ),
+            ],
+          ),
         ),
       ),
     );

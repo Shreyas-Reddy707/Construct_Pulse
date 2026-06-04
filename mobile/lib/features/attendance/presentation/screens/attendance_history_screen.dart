@@ -35,7 +35,7 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
               // Just a naive calculation for demonstration:
               // Real implementation would calculate from actual timestamps.
               final hours = days * 8; 
-              final overtime = 0; 
+              const overtime = 0; 
               
               if (history.isEmpty) {
                 return Container(
