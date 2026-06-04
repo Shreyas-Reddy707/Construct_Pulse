@@ -46,6 +46,8 @@ class User {
           .toUpperCase();
   bool get isApproved => status == UserStatus.approved;
   bool get isPending => status == UserStatus.pending;
+  bool get isRejected => status == UserStatus.rejected;
+  bool get isSuspended => status == UserStatus.suspended;
   bool get isWorker => role == UserRole.worker;
   bool get isAdmin => role == UserRole.admin || role == UserRole.superAdmin;
   bool get isManager => role == UserRole.siteManager;
@@ -64,7 +66,7 @@ class User {
       lastName: json['last_name'] ?? '',
       designation: json['designation'],
       role: UserRole.fromValue(json['role'] ?? 'worker'),
-      status: json['is_active'] == true ? UserStatus.approved : UserStatus.pending,
+      status: UserStatus.fromValue(json['status'] ?? 'pending'),
       emergencyContactName: json['emergency_contact_name'],
       emergencyContactPhone: json['emergency_contact_phone'],
       departmentName: json['department_name'],

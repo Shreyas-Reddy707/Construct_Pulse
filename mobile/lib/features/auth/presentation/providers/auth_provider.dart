@@ -93,17 +93,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> sendOtp(String phone) async {
     debugPrint('AuthNotifier: sendOtp() called with phone: $phone');
     debugPrint('AuthNotifier: Current status before sendOtp: ${state.status}');
-    if (AppConstants.demoAuth) {
-      state = state.copyWith(
-        status: AuthStatus.otpSent,
-        phone: phone,
-        verificationId: 'DEMO_VERIFICATION_ID_$phone',
-        otpCooldownSeconds: 30,
-      );
-      debugPrint('AuthNotifier: Status immediately after setting demo otpSent: ${state.status}');
-      _startCooldown();
-      return;
-    }
+
     state = state.copyWith(status: AuthStatus.loading, phone: phone);
     try {
       await _repo.sendOtp(
@@ -161,13 +151,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> verifyOtp(String code) async {
     state = state.copyWith(status: AuthStatus.loading);
     try {
-      if (AppConstants.demoAuth && code == '123456') {
-        final phone = state.phone ?? '';
-        final result = await _repo.loginWithFirebaseToken('DEMO_TOKEN_$phone');
-        await _handleSignInResult(result);
-        return;
-      }
-      
       if (state.verificationId == null) {
         throw const AuthException(message: 'Session expired. Please request a new OTP.');
       }

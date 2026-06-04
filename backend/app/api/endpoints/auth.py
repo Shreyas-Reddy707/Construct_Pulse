@@ -12,8 +12,13 @@ import os
 from pydantic import BaseModel
 from typing import Optional
 from app.models.models import UserRole, WorkerStatus
+from app.core.config import settings
+import logging
 
-DEMO_AUTH = os.getenv("DEMO_AUTH", "false").lower() == "true"
+logger = logging.getLogger(__name__)
+logger.info(f"DEMO_AUTH={settings.DEMO_AUTH}")
+
+DEMO_AUTH = settings.DEMO_AUTH
 
 @router.post("/login", response_model=schemas.Token)
 def login(login_data: schemas.FirebaseLogin, db: Session = Depends(get_db)):

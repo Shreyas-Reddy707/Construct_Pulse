@@ -36,6 +36,12 @@ class StatusBadge extends StatelessWidget {
         textColor: AppColors.dangerDark,
       );
 
+  factory StatusBadge.suspended() => const StatusBadge(
+        label: 'Suspended',
+        color: AppColors.warningLight,
+        textColor: AppColors.warningDark,
+      );
+
   factory StatusBadge.active() => const StatusBadge(
         label: 'Active',
         color: AppColors.successLight,

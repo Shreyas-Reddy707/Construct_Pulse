@@ -6,6 +6,7 @@ import '../../../../core/errors/exceptions.dart';
 import '../../domain/entities/company.dart';
 import '../../domain/entities/department.dart';
 import '../../domain/entities/contractor.dart';
+import '../../../auth/domain/entities/user.dart';
 
 final companyRepositoryProvider = Provider<CompanyRepository>((ref) {
   return CompanyRepository(ref.read(dioProvider));
@@ -56,6 +57,34 @@ class CompanyRepository {
     }
   }
 
+  Future<Company> createCompany(Map<String, dynamic> payload) async {
+    try {
+      final response = await _dio.post(ApiEndpoints.companies, data: payload);
+      return Company.fromJson(response.data);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  Future<List<User>> getCompanyUsers(String companyId) async {
+    try {
+      final response = await _dio.get('${ApiEndpoints.companies}/$companyId/users');
+      final data = response.data as List;
+      return data.map((json) => User.fromJson(json)).toList();
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
+  Future<User> assignAdmin(String companyId, String userId) async {
+    try {
+      final response = await _dio.put('${ApiEndpoints.companies}/$companyId/assign-admin/$userId');
+      return User.fromJson(response.data);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
   Future<Company> getCompany(String id) async {
     try {
       final response = await _dio.get(ApiEndpoints.company(id));
@@ -65,14 +94,7 @@ class CompanyRepository {
     }
   }
 
-  Future<String> createCompany(Map<String, dynamic> data) async {
-    try {
-      final response = await _dio.post(ApiEndpoints.companies, data: data);
-      return response.data['id'] ?? response.data['company_id'];
-    } on DioException catch (e) {
-      throw mapDioException(e);
-    }
-  }
+
 
   Future<void> updateCompany(String id, Map<String, dynamic> data) async {
     try {

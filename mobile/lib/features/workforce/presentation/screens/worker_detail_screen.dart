@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/common_widgets.dart';
+import '../../../../core/widgets/buttons.dart';
 import '../providers/worker_providers.dart';
+import '../providers/pending_workers_provider.dart';
 
 class WorkerDetailScreen extends ConsumerWidget {
   final String userId;
@@ -13,6 +15,25 @@ class WorkerDetailScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final workerAsync = ref.watch(workerDetailProvider(userId));
+    final actionState = ref.watch(workerActionNotifierProvider);
+
+    ref.listen<AsyncValue<void>>(workerActionNotifierProvider, (_, state) {
+      state.whenOrNull(
+        error: (error, stackTrace) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(error.toString()), backgroundColor: AppColors.danger),
+          );
+        },
+        data: (_) {
+          if (!state.isLoading && !state.hasError && state.hasValue) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Action successful')),
+            );
+            ref.invalidate(workerDetailProvider(userId));
+          }
+        },
+      );
+    });
     
     return Scaffold(
       appBar: AppBar(title: const Text('Worker Profile')),
@@ -32,7 +53,10 @@ class WorkerDetailScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               Text(worker.fullName, style: AppTypography.h3),
               const SizedBox(height: 4),
-              if (worker.isPending) StatusBadge.pending() else StatusBadge.approved(),
+              if (worker.isPending) StatusBadge.pending()
+              else if (worker.isRejected) StatusBadge.rejected()
+              else if (worker.isSuspended) StatusBadge.suspended()
+              else StatusBadge.approved(),
               const SizedBox(height: 24),
               _buildSection('Work Information', [
                 _buildInfoRow(Icons.badge_outlined, 'Employee ID', worker.employeeId ?? 'N/A'),
@@ -45,6 +69,44 @@ class WorkerDetailScreen extends ConsumerWidget {
                 _buildInfoRow(Icons.phone_outlined, 'Phone', worker.phone),
                 _buildInfoRow(Icons.emergency_outlined, 'Emergency Contact', '${worker.emergencyContactName ?? 'N/A'} (${worker.emergencyContactPhone ?? 'N/A'})'),
               ]),
+              const SizedBox(height: 24),
+              if (worker.isPending) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: actionState.isLoading ? null : () => ref.read(workerActionNotifierProvider.notifier).reject(worker.id),
+                        style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, side: const BorderSide(color: AppColors.danger)),
+                        child: const Text('Reject'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: PrimaryButton(
+                        text: 'Approve',
+                        onPressed: actionState.isLoading ? null : () => ref.read(workerActionNotifierProvider.notifier).approve(worker.id),
+                      ),
+                    ),
+                  ],
+                ),
+              ] else if (worker.isApproved) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: actionState.isLoading ? null : () => ref.read(workerActionNotifierProvider.notifier).suspend(worker.id),
+                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, side: const BorderSide(color: AppColors.danger)),
+                    child: const Text('Suspend Worker'),
+                  ),
+                ),
+              ] else if (worker.isSuspended) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: PrimaryButton(
+                    text: 'Reactivate Worker',
+                    onPressed: actionState.isLoading ? null : () => ref.read(workerActionNotifierProvider.notifier).reactivate(worker.id),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

@@ -48,58 +48,63 @@ class PendingWorkersScreen extends ConsumerWidget {
           }
           return Stack(
             children: [
-              ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: workers.length,
-                itemBuilder: (context, index) {
-                  final worker = workers[index];
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '${worker.firstName} ${worker.lastName}',
-                            style: AppTypography.h3,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            worker.phone,
-                            style: AppTypography.bodySmall,
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton(
-                                  onPressed: actionState.isLoading
-                                      ? null
-                                      : () => ref.read(workerActionNotifierProvider.notifier).reject(worker.id),
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: AppColors.danger,
-                                    side: const BorderSide(color: AppColors.danger),
-                                  ),
-                                  child: const Text('Reject'),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: PrimaryButton(
-                                  text: 'Approve',
-                                  onPressed: actionState.isLoading
-                                      ? null
-                                      : () => ref.read(workerActionNotifierProvider.notifier).approve(worker.id),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
+              RefreshIndicator(
+                onRefresh: () async {
+                  return ref.refresh(pendingWorkersProvider.future);
                 },
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: workers.length,
+                  itemBuilder: (context, index) {
+                    final worker = workers[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${worker.firstName} ${worker.lastName}',
+                              style: AppTypography.h3,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              worker.phone,
+                              style: AppTypography.bodySmall,
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: actionState.isLoading
+                                        ? null
+                                        : () => ref.read(workerActionNotifierProvider.notifier).reject(worker.id),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppColors.danger,
+                                      side: const BorderSide(color: AppColors.danger),
+                                    ),
+                                    child: const Text('Reject'),
+                                  ),
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: PrimaryButton(
+                                    text: 'Approve',
+                                    onPressed: actionState.isLoading
+                                        ? null
+                                        : () => ref.read(workerActionNotifierProvider.notifier).approve(worker.id),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
               if (actionState.isLoading)
                 const Positioned.fill(

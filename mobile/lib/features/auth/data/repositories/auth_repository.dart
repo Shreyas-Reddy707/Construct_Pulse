@@ -32,6 +32,15 @@ class AuthRepository {
     required Function(String) codeAutoRetrievalTimeout,
   }) async {
     debugPrint('AuthRepository: sendOtp() starting for phone: $phone');
+
+    if (AppConstants.demoAuth) {
+      debugPrint('AuthRepository: DEMO_AUTH active. Simulating OTP sent.');
+      Future.delayed(const Duration(milliseconds: 500), () {
+        codeSent('DEMO_VERIFICATION_ID_$phone', null);
+      });
+      return;
+    }
+
     try {
       await _firebaseAuth.verifyPhoneNumber(
         phoneNumber: phone,
@@ -50,6 +59,14 @@ class AuthRepository {
   /// Verify OTP
   Future<({bool isNewUser, String? accessToken, String? refreshToken})> verifyOtp(
       String verificationId, String smsCode) async {
+    if (AppConstants.demoAuth) {
+      if (smsCode != '123456') {
+        throw const AuthException(message: 'Invalid Demo OTP. Use 123456');
+      }
+      final phone = verificationId.replaceFirst('DEMO_VERIFICATION_ID_', '');
+      return await loginWithFirebaseToken('DEMO_TOKEN_$phone');
+    }
+
     try {
       final credential = firebase.PhoneAuthProvider.credential(
         verificationId: verificationId,

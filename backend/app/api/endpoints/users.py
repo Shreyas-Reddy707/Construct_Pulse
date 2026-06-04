@@ -69,4 +69,4 @@ def suspend_worker(user_id: str, db: Session = Depends(get_db), current_user: Us
 
 @router.put("/{user_id}/reactivate", response_model=schemas.UserResponse)
 def reactivate_worker(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
-    return _update_worker_status(user_id, WorkerStatus.APPROVED, True, db, current_user.id)
+    return _update_worker_status(user_id, WorkerStatus.APPROVED, True, db, current_user)

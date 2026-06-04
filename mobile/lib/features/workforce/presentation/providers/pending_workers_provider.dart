@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/worker_repository.dart';
 import '../../../auth/domain/entities/user.dart';
+import 'worker_providers.dart';
 
 final pendingWorkersProvider = FutureProvider.autoDispose<List<User>>((ref) async {
   final repository = ref.read(workerRepositoryProvider);
@@ -13,11 +14,16 @@ class WorkerActionNotifier extends StateNotifier<AsyncValue<void>> {
 
   WorkerActionNotifier(this._repository, this._ref) : super(const AsyncValue.data(null));
 
+  void _invalidateProviders() {
+    _ref.invalidate(pendingWorkersProvider);
+    _ref.invalidate(workersListProvider);
+  }
+
   Future<void> approve(String userId) async {
     state = const AsyncValue.loading();
     try {
       await _repository.approveWorker(userId);
-      _ref.invalidate(pendingWorkersProvider);
+      _invalidateProviders();
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -28,7 +34,7 @@ class WorkerActionNotifier extends StateNotifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
     try {
       await _repository.rejectWorker(userId);
-      _ref.invalidate(pendingWorkersProvider);
+      _invalidateProviders();
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -39,6 +45,7 @@ class WorkerActionNotifier extends StateNotifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
     try {
       await _repository.suspendWorker(userId);
+      _invalidateProviders();
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -49,6 +56,7 @@ class WorkerActionNotifier extends StateNotifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
     try {
       await _repository.reactivateWorker(userId);
+      _invalidateProviders();
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
