@@ -4,7 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/common_widgets.dart';
+import '../../../../core/constants/enums.dart';
 import '../providers/worker_providers.dart';
+import '../providers/pending_workers_provider.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 /// Worker List Screen (Workforce Directory)
 class WorkforceDirectoryScreen extends ConsumerStatefulWidget {
@@ -17,6 +20,7 @@ class WorkforceDirectoryScreen extends ConsumerStatefulWidget {
 
 class _WorkforceDirectoryScreenState extends ConsumerState<WorkforceDirectoryScreen> {
   String? _statusFilter;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -39,10 +43,15 @@ class _WorkforceDirectoryScreenState extends ConsumerState<WorkforceDirectoryScr
       body: Column(
         children: [
           // Search
-          const Padding(
-            padding: EdgeInsets.all(16),
+          Padding(
+            padding: const EdgeInsets.all(16),
             child: TextField(
-              decoration: InputDecoration(
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val.toLowerCase();
+                });
+              },
+              decoration: const InputDecoration(
                 hintText: 'Search workers...',
                 prefixIcon: Icon(Icons.search_rounded, size: 20),
               ),
@@ -76,11 +85,25 @@ class _WorkforceDirectoryScreenState extends ConsumerState<WorkforceDirectoryScr
           // List
           Expanded(
             child: workersAsync.when(
-              data: (workers) => ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: workers.length,
-                itemBuilder: (_, i) {
-                  final w = workers[i];
+              data: (workers) {
+                final filteredWorkers = workers.where((w) {
+                  if (_searchQuery.isEmpty) return true;
+                  final q = _searchQuery;
+                  return (w.fullName.toLowerCase().contains(q)) ||
+                         (w.contractorName?.toLowerCase().contains(q) ?? false) ||
+                         (w.departmentName?.toLowerCase().contains(q) ?? false) ||
+                         (w.phone.toLowerCase().contains(q));
+                }).toList();
+
+                if (filteredWorkers.isEmpty) {
+                  return const Center(child: Text('No workers found.'));
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filteredWorkers.length,
+                  itemBuilder: (_, i) {
+                    final w = filteredWorkers[i];
                   return Container(
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(14),
@@ -121,23 +144,40 @@ class _WorkforceDirectoryScreenState extends ConsumerState<WorkforceDirectoryScr
                           ),
                         ),
                         PopupMenuButton<String>(
-                          onSelected: (value) {
+                          onSelected: (value) async {
                             if (value == 'view') {
                               context.push('/workforce/${w.id}');
+                            } else if (value == 'approve') {
+                              await ref.read(workerActionNotifierProvider.notifier).approve(w.id);
+                            } else if (value == 'suspend') {
+                              await ref.read(workerActionNotifierProvider.notifier).suspend(w.id);
+                            } else if (value == 'reactivate') {
+                              await ref.read(workerActionNotifierProvider.notifier).reactivate(w.id);
                             }
                           },
-                          itemBuilder: (_) => [
-                            const PopupMenuItem(value: 'view', child: Text('View Profile')),
-                            const PopupMenuItem(value: 'approve', child: Text('Approve')),
-                            const PopupMenuItem(value: 'suspend', child: Text('Suspend')),
-                          ],
+                          itemBuilder: (_) {
+                            final currentUser = ref.read(authProvider).user;
+                            final isSelf = currentUser?.id == w.id;
+                            final isAdmin = w.role == UserRole.superAdmin || w.role == UserRole.admin;
+                            
+                            return [
+                              const PopupMenuItem(value: 'view', child: Text('View Profile')),
+                              if (w.isPending)
+                                const PopupMenuItem(value: 'approve', child: Text('Approve')),
+                              if (!w.isPending && !w.isSuspended && !isSelf && !isAdmin)
+                                const PopupMenuItem(value: 'suspend', child: Text('Suspend')),
+                              if (w.isSuspended && !isSelf && !isAdmin)
+                                const PopupMenuItem(value: 'reactivate', child: Text('Reactivate')),
+                            ];
+                          },
                         ),
                       ],
                     ),
                   );
                 },
-              ),
-              loading: () => const Center(child: CircularProgressIndicator()),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
               error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: AppColors.danger))),
             ),
           ),

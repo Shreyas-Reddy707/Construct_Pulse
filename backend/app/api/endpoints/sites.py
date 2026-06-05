@@ -91,6 +91,24 @@ def assign_worker(site_id: str, assignment: schemas.SiteAssignment, db: Session 
     db.commit()
     return {"message": "Worker assigned successfully"}
 
+@router.delete("/{site_id}/unassign-worker/{worker_id}")
+def unassign_worker(site_id: str, worker_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
+    site = db.query(Site).filter(Site.id == site_id)
+    if current_user.company_id:
+        site = site.filter(Site.company_id == current_user.company_id)
+    site = site.first()
+    
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+        
+    user = next((u for u in site.assigned_workers if str(u.id) == worker_id), None)
+    if not user:
+        raise HTTPException(status_code=404, detail="Worker not assigned to this site")
+        
+    site.assigned_workers.remove(user)
+    db.commit()
+    return {"message": "Worker unassigned successfully"}
+
 @router.post("/{site_id}/assign-department")
 def assign_department(site_id: str, assignment: schemas.SiteAssignment, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
     site = db.query(Site).filter(Site.id == site_id)
@@ -134,9 +152,9 @@ def get_assignments(site_id: str, db: Session = Depends(get_db), current_user: U
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
     return {
-        "workers": [u.id for u in site.assigned_workers],
-        "departments": [d.id for d in site.assigned_departments],
-        "contractors": [c.id for c in site.assigned_contractors]
+        "workers": site.assigned_workers,
+        "departments": site.assigned_departments,
+        "contractors": site.assigned_contractors
     }
 
 # --- QR Management ---

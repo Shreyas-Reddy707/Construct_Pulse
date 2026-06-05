@@ -104,7 +104,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     fontSize: 36,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 32),
+                if (authState.errorMessage != null && authState.status == AuthStatus.unauthenticated)
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.danger.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.danger),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: AppColors.danger),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            authState.errorMessage!,
+                            style: AppTypography.bodySmall.copyWith(color: AppColors.danger),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 Text(
                   'Enter your phone number to get started',
                   style: AppTypography.caption,

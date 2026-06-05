@@ -94,12 +94,27 @@ class User(Base):
     contractor_id = Column(String, ForeignKey("contractors.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     status = Column(Enum(WorkerStatus), default=WorkerStatus.PENDING)
+    emergency_contact_name = Column(String, nullable=True)
+    emergency_contact_phone = Column(String, nullable=True)
+    emergency_contact_relationship = Column(String, nullable=True)
 
     company = relationship("Company", back_populates="users")
     department = relationship("Department", back_populates="users")
     contractor = relationship("Contractor", back_populates="users")
     attendances = relationship("Attendance", back_populates="user")
     assigned_sites = relationship("Site", secondary=worker_to_site, back_populates="assigned_workers")
+
+    @property
+    def company_name(self) -> str | None:
+        return self.company.company_name if self.company else None
+
+    @property
+    def department_name(self) -> str | None:
+        return self.department.name if self.department else None
+
+    @property
+    def contractor_name(self) -> str | None:
+        return self.contractor.name if self.contractor else None
 
 class Site(Base):
     __tablename__ = "sites"

@@ -18,6 +18,11 @@ final attendanceHistoryProvider = FutureProvider<List<Attendance>>((ref) async {
   return repository.getHistory(user.id);
 });
 
+final companyAttendanceHistoryProvider = FutureProvider<List<Attendance>>((ref) async {
+  final repository = ref.read(attendanceRepositoryProvider);
+  return repository.getCompanyHistory();
+});
+
 final workerAttendanceHistoryProvider = FutureProvider.family<List<Attendance>, String>((ref, userId) async {
   final repository = ref.read(attendanceRepositoryProvider);
   return repository.getHistory(userId);

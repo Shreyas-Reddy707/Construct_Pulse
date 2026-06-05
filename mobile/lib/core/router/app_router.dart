@@ -84,11 +84,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/attendance-live',
-        builder: (_, __) => const LiveAttendanceScreen(),
+        builder: (_, state) => LiveAttendanceScreen(siteId: state.uri.queryParameters['siteId']),
       ),
       GoRoute(
         path: '/attendance-history',
         builder: (_, __) => const AttendanceHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/attendance-history/:workerId',
+        builder: (_, state) => AttendanceHistoryScreen(workerId: state.pathParameters['workerId']),
       ),
       GoRoute(
         path: '/occupancy',

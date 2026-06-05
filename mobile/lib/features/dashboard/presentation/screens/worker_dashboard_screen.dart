@@ -262,7 +262,7 @@ class WorkerDashboardScreen extends ConsumerWidget {
       const SizedBox(height: 8),
       ...attendanceList.take(3).map((a) {
         final inStr = "${a.checkInTime.hour.toString().padLeft(2, '0')}:${a.checkInTime.minute.toString().padLeft(2, '0')}";
-        final outStr = a.checkOutTime != null ? "${a.checkOutTime!.hour.toString().padLeft(2, '0')}:${a.checkOutTime!.minute.toString().padLeft(2, '0')}" : '--:--';
+        final outStr = a.checkOutTime != null ? "${a.checkOutTime!.hour.toString().padLeft(2, '0')}:${a.checkOutTime!.minute.toString().padLeft(2, '0')}" : 'Active';
         final isActive = a.status == AttendanceStatus.checkedIn;
         final duration = a.checkOutTime != null ? "${a.checkOutTime!.difference(a.checkInTime).inHours}h" : '--';
 

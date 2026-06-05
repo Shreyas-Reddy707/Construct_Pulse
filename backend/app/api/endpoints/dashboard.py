@@ -45,8 +45,8 @@ def get_dashboard_summary(
     
     # "Workers on site" could be workers who checked in today but haven't checked out yet
     workers_on_site = attendance_query.filter(
-        cast(Attendance.check_in_time, Date) == today,
-        Attendance.check_out_time == None
+        Attendance.check_out_time == None,
+        Attendance.status == "checked_in"
     ).count()
 
     return {

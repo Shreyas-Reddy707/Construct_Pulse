@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import math
+import csv
+import io
 from app.db.database import get_db
 from app.schemas import schemas
 from app.models.models import Site, User, Attendance, SiteQRCode, AttendanceStatus
@@ -107,3 +109,137 @@ def get_site_attendance(site_id: str, db: Session = Depends(get_db), current_use
     if current_user.company_id:
         query = query.filter(Attendance.company_id == current_user.company_id)
     return query.all()
+@router.get("/live", response_model=List[schemas.AttendanceResponse])
+def get_live_attendance(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
+    query = db.query(Attendance).join(User).filter(
+        Attendance.status == AttendanceStatus.CHECKED_IN,
+        Attendance.check_in_time >= yesterday
+    )
+    if current_user.company_id:
+        query = query.filter(Attendance.company_id == current_user.company_id)
+    
+    results = query.all()
+    attendances = []
+    for att in results:
+        user = db.query(User).filter(User.id == att.user_id).first()
+        site = db.query(Site).filter(Site.id == att.site_id).first()
+        attendances.append(schemas.AttendanceResponse(
+            id=att.id,
+            user_id=att.user_id,
+            user_name=user.name if user and user.name else "Unknown Worker",
+            company_name=user.company.company_name if user and user.company else None,
+            department_name=user.department.name if user and user.department else None,
+            contractor_name=user.contractor.name if user and user.contractor else None,
+            site_id=att.site_id,
+            site_name=site.name if site else "Unknown",
+            check_in_time=att.check_in_time,
+            check_out_time=att.check_out_time,
+            gps_latitude=att.gps_latitude,
+            gps_longitude=att.gps_longitude,
+            status=att.status.value
+        ))
+    return attendances
+
+@router.get("/occupancy", response_model=List[schemas.SiteOccupancyResponse])
+def get_occupancy(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    sites_query = db.query(Site)
+    if current_user.company_id:
+        sites_query = sites_query.filter(Site.company_id == current_user.company_id)
+    
+    sites = sites_query.all()
+    results = []
+    for site in sites:
+        count = db.query(Attendance).filter(
+            Attendance.site_id == site.id,
+            Attendance.status == AttendanceStatus.CHECKED_IN
+        ).count()
+        results.append({"site_id": site.id, "site_name": site.name, "workers_on_site": count})
+    return results
+
+@router.get("/history", response_model=List[schemas.AttendanceResponse])
+def get_company_attendance_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query = db.query(Attendance)
+    if current_user.company_id:
+        query = query.filter(Attendance.company_id == current_user.company_id)
+    
+    results = query.order_by(Attendance.check_in_time.desc()).all()
+    attendances = []
+    for att in results:
+        user = db.query(User).filter(User.id == att.user_id).first()
+        site = db.query(Site).filter(Site.id == att.site_id).first()
+        attendances.append(schemas.AttendanceResponse(
+            id=att.id,
+            user_id=att.user_id,
+            user_name=user.name if user and user.name else "Unknown Worker",
+            company_name=user.company.company_name if user and user.company else None,
+            department_name=user.department.name if user and user.department else None,
+            contractor_name=user.contractor.name if user and user.contractor else None,
+            site_id=att.site_id,
+            site_name=site.name if site else "Unknown",
+            check_in_time=att.check_in_time,
+            check_out_time=att.check_out_time,
+            gps_latitude=att.gps_latitude,
+            gps_longitude=att.gps_longitude,
+            status=att.status.value
+        ))
+    return attendances
+
+@router.get("/history/{worker_id}", response_model=List[schemas.AttendanceResponse])
+def get_attendance_history(worker_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query = db.query(Attendance).filter(Attendance.user_id == worker_id)
+    if current_user.company_id:
+        query = query.filter(Attendance.company_id == current_user.company_id)
+    
+    results = query.order_by(Attendance.check_in_time.desc()).all()
+    attendances = []
+    for att in results:
+        user = db.query(User).filter(User.id == att.user_id).first()
+        site = db.query(Site).filter(Site.id == att.site_id).first()
+        attendances.append(schemas.AttendanceResponse(
+            id=att.id,
+            user_id=att.user_id,
+            user_name=user.name if user and user.name else "Unknown Worker",
+            company_name=user.company.company_name if user and user.company else None,
+            department_name=user.department.name if user and user.department else None,
+            contractor_name=user.contractor.name if user and user.contractor else None,
+            site_id=att.site_id,
+            site_name=site.name if site else "Unknown",
+            check_in_time=att.check_in_time,
+            check_out_time=att.check_out_time,
+            gps_latitude=att.gps_latitude,
+            gps_longitude=att.gps_longitude,
+            status=att.status.value
+        ))
+    return attendances
+
+@router.get("/export/csv")
+def export_attendance_csv(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    query = db.query(Attendance).join(User).join(Site)
+    if current_user.company_id:
+        query = query.filter(Attendance.company_id == current_user.company_id)
+    
+    attendances = query.order_by(Attendance.check_in_time.desc()).all()
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "Worker Name", "Phone", "Site Name", "Check In", "Check Out", "Status"])
+    
+    for att in attendances:
+        user = att.user
+        site = att.site
+        writer.writerow([
+            att.id,
+            user.name if user and user.name else "Unknown",
+            user.phone_number if user else "Unknown",
+            site.name if site else "Unknown",
+            att.check_in_time.isoformat() if att.check_in_time else "",
+            att.check_out_time.isoformat() if att.check_out_time else "",
+            att.status.value
+        ])
+        
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=attendance_export.csv"}
+    )

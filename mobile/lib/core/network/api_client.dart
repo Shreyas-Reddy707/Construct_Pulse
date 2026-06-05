@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/app_constants.dart';
 import '../storage/secure_storage.dart';
 import '../constants/api_endpoints.dart';
+import '../../features/auth/presentation/providers/auth_provider.dart';
 
 /// Dio HTTP client configured for ConstructPulse API
 final dioProvider = Provider<Dio>((ref) {
@@ -56,6 +57,12 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
+    if (err.response?.data is Map && err.response?.data['detail'] == 'Inactive user') {
+      final storage = _ref.read(secureStorageProvider);
+      await storage.clearAll();
+      _ref.read(authProvider.notifier).logout('Your account has been suspended or is inactive.');
+      return handler.next(err);
+    }
     if (err.response?.statusCode == 401) {
       // Attempt token refresh
       try {

@@ -29,6 +29,12 @@ class UserResponse(UserBase):
     company_id: Optional[str] = None
     department_id: Optional[str] = None
     contractor_id: Optional[str] = None
+    company_name: Optional[str] = None
+    department_name: Optional[str] = None
+    contractor_name: Optional[str] = None
+    emergency_contact_name: Optional[str] = None
+    emergency_contact_phone: Optional[str] = None
+    emergency_contact_relationship: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -112,9 +118,9 @@ class SiteAssignment(BaseModel):
     contractor_id: Optional[str] = None
 
 class SiteAssignmentsResponse(BaseModel):
-    workers: List[str] = []
-    departments: List[str] = []
-    contractors: List[str] = []
+    workers: List[UserResponse] = []
+    departments: List[DepartmentResponse] = []
+    contractors: List[ContractorResponse] = []
 
 # --- QR Management ---
 class QRCodeResponse(BaseModel):
@@ -141,6 +147,10 @@ class AttendanceCheckOut(BaseModel):
 class AttendanceResponse(BaseModel):
     id: str
     user_id: str
+    user_name: Optional[str] = None
+    company_name: Optional[str] = None
+    department_name: Optional[str] = None
+    contractor_name: Optional[str] = None
     site_id: str
     site_name: Optional[str] = None
     check_in_time: datetime
@@ -160,3 +170,9 @@ class OccupancyResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class SiteOccupancyResponse(BaseModel):
+    site_id: str
+    site_name: str
+    workers_on_site: int
+

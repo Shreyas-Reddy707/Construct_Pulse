@@ -71,6 +71,16 @@ class AttendanceRepository {
     }
   }
 
+  Future<List<Attendance>> getCompanyHistory() async {
+    try {
+      final response = await _dio.get(ApiEndpoints.attendanceHistory);
+      final data = response.data as List;
+      return data.map((json) => Attendance.fromJson(json)).toList();
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
   Future<List<Attendance>> getLiveAttendance() async {
     try {
       final response = await _dio.get(ApiEndpoints.liveAttendance);

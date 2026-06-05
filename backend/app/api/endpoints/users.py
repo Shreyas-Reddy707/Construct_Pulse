@@ -16,12 +16,15 @@ router = APIRouter()
 def read_users(
     skip: int = 0, 
     limit: int = 100, 
+    status: WorkerStatus = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR]))
 ):
     query = db.query(User)
     if current_user.company_id:
         query = query.filter(User.company_id == current_user.company_id)
+    if status:
+        query = query.filter(User.status == status)
     users = query.offset(skip).limit(limit).all()
     return users
 
@@ -41,13 +44,62 @@ def get_pending_users(
     users = query.all()
     return users
 
+@router.get("/{user_id}", response_model=schemas.UserResponse)
+def read_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SYSTEM_ADMIN]))
+):
+    query = db.query(User).filter(User.id == user_id)
+    if current_user.company_id and current_user.role != UserRole.SYSTEM_ADMIN:
+        query = query.filter(User.company_id == current_user.company_id)
+    user = query.first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+@router.get("/{user_id}/sites", response_model=List[schemas.SiteResponse])
+def get_user_sites(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SYSTEM_ADMIN]))
+):
+    query = db.query(User).filter(User.id == user_id)
+    if current_user.company_id and current_user.role != UserRole.SYSTEM_ADMIN:
+        query = query.filter(User.company_id == current_user.company_id)
+    user = query.first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return user.assigned_sites
+
 def _update_worker_status(user_id: str, status: WorkerStatus, is_active: bool, db: Session, admin: User):
+    if user_id == admin.id and status == WorkerStatus.SUSPENDED:
+        raise HTTPException(status_code=400, detail="Cannot suspend yourself")
+        
     query = db.query(User).filter(User.id == user_id)
     if admin.company_id:
         query = query.filter(User.company_id == admin.company_id)
     user = query.first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found or access denied")
+        
+    if status == WorkerStatus.SUSPENDED and user.role in [UserRole.COMPANY_ADMIN, UserRole.SYSTEM_ADMIN]:
+        raise HTTPException(status_code=400, detail="Admin users cannot be suspended")
+
+    # If suspending, auto-checkout any active attendance sessions
+    if status == WorkerStatus.SUSPENDED:
+        from app.models.models import Attendance, AttendanceStatus
+        from datetime import datetime, timezone
+        active_sessions = db.query(Attendance).filter(
+            Attendance.user_id == user_id,
+            Attendance.status == AttendanceStatus.CHECKED_IN
+        ).all()
+        for session in active_sessions:
+            session.status = AttendanceStatus.CHECKED_OUT
+            session.check_out_time = datetime.now(timezone.utc)
+
     user.status = status
     user.is_active = is_active
     db.commit()

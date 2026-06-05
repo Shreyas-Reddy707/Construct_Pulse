@@ -14,8 +14,10 @@ class User {
   final UserStatus status;
   final String? emergencyContactName;
   final String? emergencyContactPhone;
+  final String? emergencyContactRelationship;
   final String? departmentName;
   final String? contractorName;
+  final String? companyName;
   final String? employeeId;
   final String? profilePhoto;
   final DateTime? createdAt;
@@ -33,8 +35,10 @@ class User {
     required this.status,
     this.emergencyContactName,
     this.emergencyContactPhone,
+    this.emergencyContactRelationship,
     this.departmentName,
     this.contractorName,
+    this.companyName,
     this.employeeId,
     this.profilePhoto,
     this.createdAt,
@@ -61,16 +65,18 @@ class User {
       companyId: json['company_id'] ?? '',
       departmentId: json['department_id'],
       contractorId: json['contractor_id'],
-      phone: json['phone'] ?? '',
-      firstName: json['first_name'] ?? '',
-      lastName: json['last_name'] ?? '',
+      phone: json['phone_number'] ?? json['phone'] ?? '',
+      firstName: json['first_name'] ?? (json['name'] != null ? json['name'].split(' ').first : ''),
+      lastName: json['last_name'] ?? (json['name'] != null && json['name'].split(' ').length > 1 ? json['name'].split(' ').sublist(1).join(' ') : ''),
       designation: json['designation'],
       role: UserRole.fromValue(json['role'] ?? 'worker'),
       status: UserStatus.fromValue(json['status'] ?? 'pending'),
       emergencyContactName: json['emergency_contact_name'],
       emergencyContactPhone: json['emergency_contact_phone'],
+      emergencyContactRelationship: json['emergency_contact_relationship'],
       departmentName: json['department_name'],
       contractorName: json['contractor_name'],
+      companyName: json['company_name'],
       employeeId: json['employee_id'],
       profilePhoto: json['profile_photo'],
       createdAt: json['created_at'] != null

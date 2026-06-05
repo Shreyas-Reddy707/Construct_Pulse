@@ -44,11 +44,12 @@ def db_session():
 def setup_data():
     db_session = TestingSessionLocal()
     unique_suffix = str(uuid.uuid4())[:8]
-    company = Company(name=f"Test Company {unique_suffix}")
+    company = Company(company_name=f"Test Company {unique_suffix}")
     db_session.add(company)
     db_session.commit()
     
-    user = User(firebase_uid=f"test_uid_{unique_suffix}", phone_number=f"+1000{unique_suffix}", name="Test User", company_id=company.id)
+    from app.models.models import WorkerStatus
+    user = User(firebase_uid=f"test_uid_{unique_suffix}", phone_number=f"+1000{unique_suffix}", name="Test User", company_id=company.id, status=WorkerStatus.APPROVED)
     db_session.add(user)
     db_session.commit()
 

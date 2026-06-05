@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/common_widgets.dart';
 import '../../../../core/widgets/buttons.dart';
 import '../providers/worker_providers.dart';
-import '../providers/pending_workers_provider.dart';
 import '../../../attendance/presentation/providers/attendance_providers.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/constants/enums.dart';
 import 'package:intl/intl.dart';
+import '../providers/pending_workers_provider.dart';
 
 class WorkerDetailScreen extends ConsumerWidget {
   final String userId;
@@ -19,6 +21,7 @@ class WorkerDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final workerAsync = ref.watch(workerDetailProvider(userId));
     final actionState = ref.watch(workerActionNotifierProvider);
+    final currentUser = ref.watch(authProvider).user;
 
     ref.listen<AsyncValue<void>>(workerActionNotifierProvider, (_, state) {
       state.whenOrNull(
@@ -62,15 +65,18 @@ class WorkerDetailScreen extends ConsumerWidget {
               else StatusBadge.approved(),
               const SizedBox(height: 24),
               _buildSection('Work Information', [
+                _buildInfoRow(Icons.business_outlined, 'Company', worker.companyName ?? 'N/A'),
                 _buildInfoRow(Icons.badge_outlined, 'Employee ID', worker.employeeId ?? 'N/A'),
                 _buildInfoRow(Icons.work_outline, 'Designation', worker.designation ?? 'N/A'),
-                _buildInfoRow(Icons.business_outlined, 'Department', worker.departmentName ?? 'N/A'),
+                _buildInfoRow(Icons.category_outlined, 'Department', worker.departmentName ?? 'N/A'),
                 _buildInfoRow(Icons.apartment_outlined, 'Contractor', worker.contractorName ?? 'N/A'),
               ]),
               const SizedBox(height: 16),
               _buildSection('Contact Information', [
-                _buildInfoRow(Icons.phone_outlined, 'Phone', worker.phone),
+                _buildInfoRow(Icons.phone_outlined, 'Phone', worker.phone.isEmpty ? 'N/A' : worker.phone),
                 _buildInfoRow(Icons.emergency_outlined, 'Emergency Contact', '${worker.emergencyContactName ?? 'N/A'} (${worker.emergencyContactPhone ?? 'N/A'})'),
+                if (worker.emergencyContactRelationship != null)
+                  _buildInfoRow(Icons.family_restroom, 'Relationship', worker.emergencyContactRelationship!),
               ]),
               const SizedBox(height: 24),
               if (worker.isPending) ...[
@@ -93,14 +99,15 @@ class WorkerDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ] else if (worker.isApproved) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: actionState.isLoading ? null : () => ref.read(workerActionNotifierProvider.notifier).suspend(worker.id),
-                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, side: const BorderSide(color: AppColors.danger)),
-                    child: const Text('Suspend Worker'),
+                if (currentUser != null && currentUser.id != worker.id && !worker.isAdmin)
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: actionState.isLoading ? null : () => ref.read(workerActionNotifierProvider.notifier).suspend(worker.id),
+                      style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger, side: const BorderSide(color: AppColors.danger)),
+                      child: const Text('Suspend Worker'),
+                    ),
                   ),
-                ),
               ] else if (worker.isSuspended) ...[
                 SizedBox(
                   width: double.infinity,
@@ -133,11 +140,17 @@ class WorkerDetailScreen extends ConsumerWidget {
                     if (attendance.isEmpty) return const Padding(padding: EdgeInsets.all(8.0), child: Text('No recent attendance'));
                     final recent = attendance.take(5).toList();
                     return Column(
-                      children: recent.map((a) => ListTile(
-                        leading: Icon(a.status == AttendanceStatus.checkedIn ? Icons.login_rounded : Icons.logout_rounded, color: a.status == AttendanceStatus.checkedIn ? AppColors.success : AppColors.surfaceVariant),
-                        title: Text(a.status == AttendanceStatus.checkedIn ? 'Checked In' : 'Checked Out'),
-                        subtitle: Text(DateFormat('MMM dd, yyyy - hh:mm a').format(a.checkInTime)),
-                      )).toList(),
+                      children: [
+                        ...recent.map((a) => ListTile(
+                          leading: Icon(a.status == AttendanceStatus.checkedIn ? Icons.login_rounded : Icons.logout_rounded, color: a.status == AttendanceStatus.checkedIn ? AppColors.success : AppColors.surfaceVariant),
+                          title: Text(a.status == AttendanceStatus.checkedIn ? 'Checked In' : 'Checked Out'),
+                          subtitle: Text(DateFormat('MMM dd, yyyy - hh:mm a').format(a.checkInTime)),
+                        )),
+                        TextButton(
+                          onPressed: () => context.push('/attendance-history/$userId'),
+                          child: const Text('View Full History'),
+                        ),
+                      ],
                     );
                   },
                   loading: () => const CircularProgressIndicator(),
@@ -159,15 +172,18 @@ class WorkerDetailScreen extends ConsumerWidget {
       children: [
         Text(title, style: AppTypography.h4.copyWith(fontSize: 16)),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Column(
-            children: children,
+        Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              children: children,
+            ),
           ),
         ),
       ],

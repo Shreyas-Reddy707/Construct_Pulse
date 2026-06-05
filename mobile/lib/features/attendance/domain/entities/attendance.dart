@@ -5,6 +5,9 @@ class Attendance extends Equatable {
   final String id;
   final String userId;
   final String? userName;
+  final String? companyName;
+  final String? departmentName;
+  final String? contractorName;
   final String siteId;
   final String? siteName;
   final DateTime checkInTime;
@@ -15,6 +18,9 @@ class Attendance extends Equatable {
     required this.id,
     required this.userId,
     this.userName,
+    this.companyName,
+    this.departmentName,
+    this.contractorName,
     required this.siteId,
     this.siteName,
     required this.checkInTime,
@@ -27,6 +33,9 @@ class Attendance extends Equatable {
       id: json['id'] as String,
       userId: json['user_id'] as String,
       userName: json['user_name'] as String?,
+      companyName: json['company_name'] as String?,
+      departmentName: json['department_name'] as String?,
+      contractorName: json['contractor_name'] as String?,
       siteId: json['site_id'] as String,
       siteName: json['site_name'] as String?,
       checkInTime: DateTime.parse(json['check_in_time'] as String),
@@ -42,6 +51,9 @@ class Attendance extends Equatable {
       'id': id,
       'user_id': userId,
       if (userName != null) 'user_name': userName,
+      if (companyName != null) 'company_name': companyName,
+      if (departmentName != null) 'department_name': departmentName,
+      if (contractorName != null) 'contractor_name': contractorName,
       'site_id': siteId,
       if (siteName != null) 'site_name': siteName,
       'check_in_time': checkInTime.toIso8601String(),
@@ -55,6 +67,9 @@ class Attendance extends Equatable {
         id,
         userId,
         userName,
+        companyName,
+        departmentName,
+        contractorName,
         siteId,
         siteName,
         checkInTime,

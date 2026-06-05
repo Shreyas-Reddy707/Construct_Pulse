@@ -196,13 +196,8 @@ class AuthRepository {
 
   /// Logout
   Future<void> logout() async {
-    try {
-      await _dio.post(ApiEndpoints.logout);
-    } catch (_) {
-      // Logout silently even if API call fails
-    } finally {
-      await _storage.clearAll();
-    }
+    // Only clear local storage, no backend endpoint exists
+    await _storage.clearAll();
   }
 
   /// Check if user has valid session

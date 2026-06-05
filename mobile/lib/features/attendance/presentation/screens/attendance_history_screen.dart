@@ -7,72 +7,68 @@ import '../../../../core/widgets/common_widgets.dart';
 import '../providers/attendance_providers.dart';
 import '../../domain/entities/attendance.dart';
 import '../../../../core/constants/enums.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../workforce/presentation/providers/worker_providers.dart';
 
 /// Attendance History Screen
 class AttendanceHistoryScreen extends ConsumerStatefulWidget {
-  const AttendanceHistoryScreen({super.key});
+  final String? workerId;
+  const AttendanceHistoryScreen({super.key, this.workerId});
 
   @override
   ConsumerState<AttendanceHistoryScreen> createState() => _AttendanceHistoryScreenState();
 }
 
 class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScreen> {
-  String _filter = 'This Month';
+  String _filter = 'All Time';
+  String? _selectedWorkerId;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedWorkerId = widget.workerId;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final historyAsync = ref.watch(attendanceHistoryProvider);
+    final user = ref.watch(authProvider.select((s) => s.user));
+    final isAdmin = user?.isAdmin ?? false;
+    
+    AsyncValue<List<Attendance>> historyAsync;
+    
+    if (isAdmin && widget.workerId == null) {
+      if (_selectedWorkerId == null) {
+        historyAsync = ref.watch(companyAttendanceHistoryProvider);
+      } else {
+        historyAsync = ref.watch(workerAttendanceHistoryProvider(_selectedWorkerId!));
+      }
+    } else {
+      final targetUserId = widget.workerId ?? user?.id;
+      historyAsync = targetUserId != null 
+          ? ref.watch(workerAttendanceHistoryProvider(targetUserId))
+          : const AsyncValue.data(<Attendance>[]);
+    }
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(title: const Text('Attendance History')),
       body: Column(
         children: [
-          // Summary Card
-          historyAsync.when(
-            data: (history) {
-              final days = history.length;
-              // Just a naive calculation for demonstration:
-              // Real implementation would calculate from actual timestamps.
-              final hours = days * 8; 
-              const overtime = 0; 
-              
-              if (history.isEmpty) {
-                return Container(
-                  margin: const EdgeInsets.all(16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface, borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-                    _summaryItem('Days', '--', AppColors.primary),
-                    _divider(),
-                    _summaryItem('Hours', '--', AppColors.success),
-                    _divider(),
-                    _summaryItem('Overtime', '--', AppColors.secondary),
-                  ]),
-                );
-              }
-              
-              return Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surface, borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-                  _summaryItem('Days', '$days', AppColors.primary),
-                  _divider(),
-                  _summaryItem('Hours', '$hours', AppColors.success),
-                  _divider(),
-                  _summaryItem('Overtime', '${overtime}h', AppColors.secondary),
-                ]),
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (err, _) => const SizedBox(),
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: TextField(
+              onChanged: (val) {
+                setState(() {
+                  _searchQuery = val.toLowerCase();
+                });
+              },
+              decoration: const InputDecoration(
+                hintText: 'Search history...',
+                prefixIcon: Icon(Icons.search_rounded, size: 20),
+              ),
+            ),
           ),
           // Filter Chips
           SizedBox(
@@ -81,24 +77,80 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
+                _filterChip('All Time', _filter == 'All Time', () => setState(() => _filter = 'All Time')),
                 _filterChip('This Month', _filter == 'This Month', () => setState(() => _filter = 'This Month')),
                 _filterChip('Last Month', _filter == 'Last Month', () => setState(() => _filter = 'Last Month')),
                 _filterChip('Custom', _filter == 'Custom', () => setState(() => _filter = 'Custom')),
               ],
             ),
           ),
+          if (isAdmin && widget.workerId == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ref.watch(workersListProvider(null)).when(
+                data: (workers) {
+                  if (workers.isEmpty) return const SizedBox();
+                  return DropdownButton<String>(
+                    isExpanded: true,
+                    hint: const Text('Select Worker'),
+                    value: _selectedWorkerId,
+                    items: [
+                      const DropdownMenuItem<String>(
+                        child: Text('All Workers'),
+                      ),
+                      ...workers.map((w) => DropdownMenuItem<String>(
+                            value: w.id,
+                            child: Text(w.fullName),
+                          )),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedWorkerId = val;
+                      });
+                    },
+                  );
+                },
+                loading: () => const LinearProgressIndicator(),
+                error: (_, __) => const SizedBox(),
+              ),
+            ),
           const SizedBox(height: 8),
           // List
           Expanded(
             child: historyAsync.when(
-              data: (history) {
-                if (history.isEmpty) {
+              data: (records) {
+                var filtered = records;
+                
+                // Date filtering
+                if (_filter == 'This Month') {
+                  final now = DateTime.now();
+                  filtered = filtered.where((r) => r.checkInTime.month == now.month && r.checkInTime.year == now.year).toList();
+                } else if (_filter == 'Last Month') {
+                  final now = DateTime.now();
+                  final lastMonth = now.month == 1 ? 12 : now.month - 1;
+                  final year = now.month == 1 ? now.year - 1 : now.year;
+                  filtered = filtered.where((r) => r.checkInTime.month == lastMonth && r.checkInTime.year == year).toList();
+                }
+
+                // Text search filtering
+                if (_searchQuery.isNotEmpty) {
+                  final q = _searchQuery;
+                  filtered = filtered.where((r) =>
+                      (r.userName?.toLowerCase().contains(q) ?? false) ||
+                      (r.contractorName?.toLowerCase().contains(q) ?? false) ||
+                      (r.companyName?.toLowerCase().contains(q) ?? false) ||
+                      (r.siteName?.toLowerCase().contains(q) ?? false) ||
+                      (r.departmentName?.toLowerCase().contains(q) ?? false)
+                  ).toList();
+                }
+
+                if (filtered.isEmpty) {
                   return const Center(child: Text('No attendance records found.'));
                 }
                 return ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  itemCount: history.length,
-                  itemBuilder: (ctx, i) => _attendanceItem(history[i]),
+                  itemCount: filtered.length,
+                  itemBuilder: (ctx, i) => _attendanceItem(filtered[i]),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -110,15 +162,7 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
     );
   }
 
-  Widget _summaryItem(String label, String value, Color color) {
-    return Column(children: [
-      Text(value, style: AppTypography.h3.copyWith(color: color)),
-      const SizedBox(height: 4),
-      Text(label, style: AppTypography.caption.copyWith(fontSize: 12)),
-    ]);
-  }
 
-  Widget _divider() => Container(width: 1, height: 40, color: AppColors.border);
 
   Widget _filterChip(String label, bool selected, VoidCallback onTap) {
     return Padding(
@@ -134,49 +178,54 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
   }
 
   Widget _attendanceItem(Attendance record) {
-    final dateStr = DateFormat('MMM dd, yyyy').format(record.checkInTime);
-    final isToday = DateFormat('yyyy-MM-dd').format(record.checkInTime) == DateFormat('yyyy-MM-dd').format(DateTime.now());
-    
+    final dateStr = DateFormat('dd Jun yyyy').format(record.checkInTime);
     final checkInStr = DateFormat('HH:mm').format(record.checkInTime);
-    final checkOutStr = record.checkOutTime != null ? DateFormat('HH:mm').format(record.checkOutTime!) : '--:--';
+    final checkOutStr = record.checkOutTime != null ? DateFormat('HH:mm').format(record.checkOutTime!) : 'Active';
     
     String hoursWorked = '--';
     if (record.checkOutTime != null) {
       final diff = record.checkOutTime!.difference(record.checkInTime);
       hoursWorked = '${(diff.inMinutes / 60).toStringAsFixed(1)}h';
+    } else {
+      hoursWorked = 'On Site';
     }
 
+    final workerName = record.userName ?? 'Unknown Worker';
+    final contractorName = record.contractorName ?? record.companyName ?? 'Unknown Company';
+    final siteName = record.siteName ?? 'Unknown Site';
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface, borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isToday ? AppColors.primary.withValues(alpha: 0.3) : AppColors.border),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
       ),
-      child: Row(children: [
-        Container(
-          width: 44, height: 44,
-          decoration: BoxDecoration(
-            color: isToday ? AppColors.primarySurface : AppColors.surfaceVariant,
-            borderRadius: BorderRadius.circular(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(workerName, style: AppTypography.body.copyWith(fontWeight: FontWeight.w700)),
+              record.status == AttendanceStatus.checkedIn ? StatusBadge.checkedIn() : StatusBadge.checkedOut(),
+            ],
           ),
-          child: Center(child: Text(DateFormat('dd').format(record.checkInTime), style: AppTypography.bodySmall.copyWith(
-            fontWeight: FontWeight.w700,
-            color: isToday ? AppColors.primary : AppColors.textSecondary,
-          ))),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(isToday ? 'Today' : dateStr, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 2),
-          Text('$checkInStr → $checkOutStr', style: AppTypography.caption.copyWith(fontSize: 12)),
-        ])),
-        Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-          Text(hoursWorked, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 2),
-          record.status == AttendanceStatus.checkedIn ? StatusBadge.checkedIn() : StatusBadge.checkedOut(),
-        ]),
-      ]),
+          const SizedBox(height: 8),
+          Text(contractorName, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+          Text(siteName, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(dateStr, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+              Text('$checkInStr → $checkOutStr', style: AppTypography.bodySmall),
+              Text(hoursWorked, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

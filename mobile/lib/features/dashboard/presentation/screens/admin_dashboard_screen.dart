@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/kpi_card.dart';
 import '../../../../core/network/api_client.dart';
+import '../../../attendance/presentation/providers/attendance_providers.dart';
 
 final adminDashboardSummaryProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   final dio = ref.read(dioProvider);
@@ -19,6 +21,7 @@ class AdminDashboardScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summaryAsync = ref.watch(adminDashboardSummaryProvider);
+    final occupancyAsync = ref.watch(occupancyProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -75,24 +78,98 @@ class AdminDashboardScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 24),
-                      Text('Attendance (Today)', style: AppTypography.h4),
+                      Text('Attendance Today', style: AppTypography.h4),
                       const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
                             child: GestureDetector(
                               onTap: () => context.push('/attendance-live'),
-                              child: KpiCard(label: 'Checked In', value: data['checked_in_today'].toString(), icon: Icons.login_rounded, iconColor: AppColors.success),
+                              child: KpiCard(label: 'Currently On Site', value: data['workers_on_site'].toString(), icon: Icons.engineering_rounded, iconColor: AppColors.primary),
                             )
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => context.push('/attendance-history'),
-                              child: KpiCard(label: 'Checked Out', value: data['checked_out_today'].toString(), icon: Icons.logout_rounded, iconColor: AppColors.surfaceVariant),
+                              onTap: () => context.push('/attendance-live'),
+                              child: KpiCard(label: 'Checked In Today', value: data['checked_in_today'].toString(), icon: Icons.login_rounded, iconColor: AppColors.success),
                             )
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.push('/attendance-history'),
+                              child: KpiCard(label: 'Completed Shifts', value: data['checked_out_today'].toString(), icon: Icons.logout_rounded, iconColor: AppColors.surfaceVariant),
+                            )
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(child: Container()), // Empty space to keep sizing consistent
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Currently On Site Preview', style: AppTypography.body.copyWith(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          return ref.watch(liveAttendanceProvider).when(
+                            data: (live) {
+                              if (live.isEmpty) return const Text('No active workers.');
+                              return Column(
+                                children: [
+                                  ...live.take(3).map((a) => ListTile(
+                                        title: Text(a.userName ?? 'Unknown'),
+                                        subtitle: Text('${a.siteName ?? 'Unknown'}\nChecked In: ${DateFormat('HH:mm').format(a.checkInTime)}'),
+                                        isThreeLine: true,
+                                        contentPadding: EdgeInsets.zero,
+                                      )),
+                                  TextButton(
+                                    onPressed: () => context.push('/attendance-live'),
+                                    child: const Text('View All →'),
+                                  )
+                                ],
+                              );
+                            },
+                            loading: () => const LinearProgressIndicator(),
+                            error: (_, __) => const SizedBox(),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      Text('Recent Completed Shifts', style: AppTypography.body.copyWith(fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          return ref.watch(companyAttendanceHistoryProvider).when(
+                            data: (history) {
+                              final completed = history.where((a) => a.checkOutTime != null).toList();
+                              if (completed.isEmpty) return const Text('No completed shifts today.');
+                              return Column(
+                                children: [
+                                  ...completed.take(3).map((a) {
+                                    final diff = a.checkOutTime!.difference(a.checkInTime);
+                                    final duration = '${(diff.inMinutes / 60).toStringAsFixed(1)}h';
+                                    return ListTile(
+                                      title: Text(a.userName ?? 'Unknown'),
+                                      subtitle: Text('${a.siteName ?? 'Unknown'}\n${DateFormat('HH:mm').format(a.checkInTime)} → ${DateFormat('HH:mm').format(a.checkOutTime!)}\n$duration'),
+                                      isThreeLine: true,
+                                      contentPadding: EdgeInsets.zero,
+                                    );
+                                  }),
+                                  TextButton(
+                                    onPressed: () => context.push('/attendance-history'),
+                                    child: const Text('View All →'),
+                                  )
+                                ],
+                              );
+                            },
+                            loading: () => const LinearProgressIndicator(),
+                            error: (_, __) => const SizedBox(),
+                          );
+                        },
                       ),
                       const SizedBox(height: 24),
                       Text('Sites Overview', style: AppTypography.h4),
@@ -113,6 +190,44 @@ class AdminDashboardScreen extends ConsumerWidget {
                             )
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 24),
+                      Text('Site Occupancy', style: AppTypography.h4),
+                      const SizedBox(height: 12),
+                      occupancyAsync.when(
+                        data: (occupancy) {
+                          if (occupancy.isEmpty) {
+                            return const Text('No active workers on site.');
+                          }
+                          return Column(
+                            children: occupancy.map((site) {
+                              return Card(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                child: ListTile(
+                                  onTap: () => context.push('/attendance-live?siteId=${site['site_id']}'),
+                                  leading: const Icon(Icons.business_rounded, color: AppColors.primary),
+                                  title: Text(site['site_name']),
+                                  trailing: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primarySurface,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Text(
+                                      '${site['workers_on_site']} active',
+                                      style: AppTypography.bodySmall.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          );
+                        },
+                        loading: () => const LinearProgressIndicator(),
+                        error: (_, __) => const Text('Failed to load occupancy data'),
                       ),
                     ],
                   ),

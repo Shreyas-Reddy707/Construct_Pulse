@@ -243,9 +243,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   /// Logout
-  Future<void> logout() async {
+  Future<void> logout([String? reason]) async {
     await _repo.logout();
-    state = const AuthState(status: AuthStatus.unauthenticated);
+    state = AuthState(status: AuthStatus.unauthenticated, errorMessage: reason);
   }
 
   /// Resend OTP
