@@ -10,6 +10,7 @@ This system provides real-time visibility into site occupancy, automated attenda
 
 ## Architecture
 
+
 - **Frontend:** Flutter (Dart) mobile application
   - State Management: Riverpod
   - Routing: GoRouter
