@@ -38,6 +38,7 @@ SECRET_KEY=your_secret_here
 JWT_SECRET=your_jwt_secret_here
 ```
 
+
 ### PostgreSQL Setup
 1. Install PostgreSQL.
 2. Create a database named `constructpulse` (or as defined in your `.env`).
