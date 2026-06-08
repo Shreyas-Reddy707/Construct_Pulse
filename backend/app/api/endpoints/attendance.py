@@ -147,12 +147,14 @@ def get_occupancy(db: Session = Depends(get_db), current_user: User = Depends(ge
     if current_user.company_id:
         sites_query = sites_query.filter(Site.company_id == current_user.company_id)
     
+    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
     sites = sites_query.all()
     results = []
     for site in sites:
         count = db.query(Attendance).filter(
             Attendance.site_id == site.id,
-            Attendance.status == AttendanceStatus.CHECKED_IN
+            Attendance.status == AttendanceStatus.CHECKED_IN,
+            Attendance.check_in_time >= yesterday
         ).count()
         results.append({"site_id": site.id, "site_name": site.name, "workers_on_site": count})
     return results

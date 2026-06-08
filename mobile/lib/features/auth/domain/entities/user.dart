@@ -20,6 +20,7 @@ class User {
   final String? companyName;
   final String? employeeId;
   final String? profilePhoto;
+  final String? assignedSiteNames;
   final DateTime? createdAt;
 
   const User({
@@ -41,6 +42,7 @@ class User {
     this.companyName,
     this.employeeId,
     this.profilePhoto,
+    this.assignedSiteNames,
     this.createdAt,
   });
 
@@ -79,6 +81,7 @@ class User {
       companyName: json['company_name'],
       employeeId: json['employee_id'],
       profilePhoto: json['profile_photo'],
+      assignedSiteNames: json['assigned_site_names'],
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -100,5 +103,6 @@ class User {
         'emergency_contact_phone': emergencyContactPhone,
         'employee_id': employeeId,
         'profile_photo': profilePhoto,
+        'assigned_site_names': assignedSiteNames,
       };
 }

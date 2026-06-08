@@ -35,6 +35,7 @@ class UserResponse(UserBase):
     emergency_contact_name: Optional[str] = None
     emergency_contact_phone: Optional[str] = None
     emergency_contact_relationship: Optional[str] = None
+    assigned_site_names: Optional[str] = None
 
     class Config:
         from_attributes = True

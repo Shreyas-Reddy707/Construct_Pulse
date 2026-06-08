@@ -63,7 +63,7 @@ class _WorkforceDirectoryScreenState extends ConsumerState<WorkforceDirectoryScr
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: ['All', 'Approved', 'Pending']
+              children: ['All', 'Approved', 'Pending', 'Suspended']
                   .map((f) => Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: FilterChip(
@@ -92,6 +92,7 @@ class _WorkforceDirectoryScreenState extends ConsumerState<WorkforceDirectoryScr
                   return (w.fullName.toLowerCase().contains(q)) ||
                          (w.contractorName?.toLowerCase().contains(q) ?? false) ||
                          (w.departmentName?.toLowerCase().contains(q) ?? false) ||
+                         (w.assignedSiteNames?.toLowerCase().contains(q) ?? false) ||
                          (w.phone.toLowerCase().contains(q));
                 }).toList();
 

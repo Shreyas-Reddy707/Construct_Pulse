@@ -4,7 +4,7 @@ from sqlalchemy import cast, Date
 from app.db.database import get_db
 from app.models.models import User, Company, Site, WorkerStatus, Attendance
 from app.api.deps import get_current_user, RoleChecker
-from datetime import datetime, date
+from datetime import datetime, date, timedelta, timezone
 
 router = APIRouter()
 
@@ -27,26 +27,29 @@ def get_dashboard_summary(
         sites_query = sites_query.filter(Site.company_id == company_id)
         attendance_query = attendance_query.join(User).filter(User.company_id == company_id)
 
-    total_workers = users_query.filter(User.role == "Worker").count()
-    pending_workers = users_query.filter(User.status == "pending", User.role == "Worker").count()
-    approved_workers = users_query.filter(User.status == "approved", User.role == "Worker").count()
-    suspended_workers = users_query.filter(User.status == "suspended", User.role == "Worker").count()
+    total_workers = users_query.count()
+    pending_workers = users_query.filter(User.status == "pending").count()
+    approved_workers = users_query.filter(User.status == "approved").count()
+    suspended_workers = users_query.filter(User.status == "suspended").count()
 
     active_sites = sites_query.filter(Site.status == "active").count()
 
-    today = date.today()
+    today_utc = datetime.now(timezone.utc).date()
+    yesterday_utc = datetime.now(timezone.utc) - timedelta(hours=24)
+
     checked_in_today = attendance_query.filter(
-        cast(Attendance.check_in_time, Date) == today
+        cast(Attendance.check_in_time, Date) == today_utc
     ).count()
     
     checked_out_today = attendance_query.filter(
-        cast(Attendance.check_out_time, Date) == today
+        cast(Attendance.check_out_time, Date) == today_utc
     ).count()
     
-    # "Workers on site" could be workers who checked in today but haven't checked out yet
+    # "Workers on site" must exclude stale records older than 24 hours
     workers_on_site = attendance_query.filter(
         Attendance.check_out_time == None,
-        Attendance.status == "checked_in"
+        Attendance.status == "checked_in",
+        Attendance.check_in_time >= yesterday_utc
     ).count()
 
     return {

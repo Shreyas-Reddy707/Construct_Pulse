@@ -118,19 +118,37 @@ class AdminDashboardScreen extends ConsumerWidget {
                           return ref.watch(liveAttendanceProvider).when(
                             data: (live) {
                               if (live.isEmpty) return const Text('No active workers.');
-                              return Column(
-                                children: [
-                                  ...live.take(3).map((a) => ListTile(
-                                        title: Text(a.userName ?? 'Unknown'),
-                                        subtitle: Text('${a.siteName ?? 'Unknown'}\nChecked In: ${DateFormat('HH:mm').format(a.checkInTime)}'),
-                                        isThreeLine: true,
-                                        contentPadding: EdgeInsets.zero,
-                                      )),
-                                  TextButton(
-                                    onPressed: () => context.push('/attendance-live'),
-                                    child: const Text('View All →'),
-                                  )
-                                ],
+                              final displayed = live.take(3).toList();
+                              final remaining = live.length - displayed.length;
+                              return Card(
+                                elevation: 0,
+                                color: AppColors.surface,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: const BorderSide(color: AppColors.border),
+                                ),
+                                child: Column(
+                                  children: [
+                                    ...displayed.map((a) => ListTile(
+                                          leading: const CircleAvatar(
+                                            backgroundColor: AppColors.primarySurface,
+                                            child: Icon(Icons.person, color: AppColors.primary, size: 20),
+                                          ),
+                                          title: Text(a.userName ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                          subtitle: Text('${a.siteName ?? 'Unknown'} · Checked In: ${DateFormat('HH:mm').format(a.checkInTime)}'),
+                                        )),
+                                    if (remaining > 0)
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 8),
+                                        child: Text('+$remaining more active', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
+                                      ),
+                                    const Divider(height: 1),
+                                    TextButton(
+                                      onPressed: () => context.push('/attendance-live'),
+                                      child: const Text('View All Active →'),
+                                    )
+                                  ],
+                                ),
                               );
                             },
                             loading: () => const LinearProgressIndicator(),
@@ -147,23 +165,42 @@ class AdminDashboardScreen extends ConsumerWidget {
                             data: (history) {
                               final completed = history.where((a) => a.checkOutTime != null).toList();
                               if (completed.isEmpty) return const Text('No completed shifts today.');
-                              return Column(
-                                children: [
-                                  ...completed.take(3).map((a) {
-                                    final diff = a.checkOutTime!.difference(a.checkInTime);
-                                    final duration = '${(diff.inMinutes / 60).toStringAsFixed(1)}h';
-                                    return ListTile(
-                                      title: Text(a.userName ?? 'Unknown'),
-                                      subtitle: Text('${a.siteName ?? 'Unknown'}\n${DateFormat('HH:mm').format(a.checkInTime)} → ${DateFormat('HH:mm').format(a.checkOutTime!)}\n$duration'),
-                                      isThreeLine: true,
-                                      contentPadding: EdgeInsets.zero,
-                                    );
-                                  }),
-                                  TextButton(
-                                    onPressed: () => context.push('/attendance-history'),
-                                    child: const Text('View All →'),
-                                  )
-                                ],
+                              return Card(
+                                elevation: 0,
+                                color: AppColors.surface,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: const BorderSide(color: AppColors.border),
+                                ),
+                                child: Column(
+                                  children: [
+                                    ...completed.take(3).map((a) {
+                                      final diff = a.checkOutTime!.difference(a.checkInTime);
+                                      final duration = '${(diff.inMinutes / 60).toStringAsFixed(1)}h';
+                                      return ListTile(
+                                        leading: const CircleAvatar(
+                                          backgroundColor: AppColors.background,
+                                          child: Icon(Icons.logout, color: AppColors.textSecondary, size: 20),
+                                        ),
+                                        title: Text(a.userName ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                        subtitle: Text('${a.siteName ?? 'Unknown'} · $duration'),
+                                        trailing: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: AppColors.background,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: const Text('Checked Out', style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
+                                        ),
+                                      );
+                                    }),
+                                    const Divider(height: 1),
+                                    TextButton(
+                                      onPressed: () => context.push('/attendance-history'),
+                                      child: const Text('View All History →'),
+                                    )
+                                  ],
+                                ),
                               );
                             },
                             loading: () => const LinearProgressIndicator(),
@@ -255,9 +292,13 @@ class AdminDashboardScreen extends ConsumerWidget {
           ],
         ),
         IconButton(
-          icon: const Icon(Icons.analytics_rounded, color: AppColors.primary),
-          onPressed: () => context.push('/analytics'),
-          tooltip: 'Analytics & Reporting',
+          icon: const Icon(Icons.analytics_rounded, color: AppColors.textSecondary),
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Analytics & Reporting: Coming Soon')),
+            );
+          },
+          tooltip: 'Analytics & Reporting (Coming Soon)',
         ),
       ],
     );

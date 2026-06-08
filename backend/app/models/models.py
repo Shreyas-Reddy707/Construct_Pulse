@@ -116,6 +116,10 @@ class User(Base):
     def contractor_name(self) -> str | None:
         return self.contractor.name if self.contractor else None
 
+    @property
+    def assigned_site_names(self) -> str:
+        return ", ".join([s.name for s in self.assigned_sites]) if self.assigned_sites else ""
+
 class Site(Base):
     __tablename__ = "sites"
     __table_args__ = (UniqueConstraint('company_id', 'name', name='uq_company_site_name'),)
