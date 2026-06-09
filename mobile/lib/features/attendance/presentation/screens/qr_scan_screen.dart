@@ -7,6 +7,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/buttons.dart';
 import '../providers/attendance_providers.dart';
+import 'package:constructpulse/core/network/api_client.dart';
 
 /// QR Attendance Scan Screen (Spec §72)
 class QrScanScreen extends ConsumerStatefulWidget {
@@ -148,9 +149,38 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
     });
     
     _scannerController.stop();
-    const dummySiteId = 'S-12345';
-    const dummyQrToken = 'dummy-token';
-    await _processAttendance(dummySiteId, dummyQrToken);
+    const siteId = '65a4d83f-1343-4652-a249-17b926f1b386';
+    
+    try {
+      final dio = ref.read(dioProvider);
+      final resp = await dio.get('/sites/$siteId/qr');
+      final qrToken = resp.data['qr_token'];
+      
+      if (_isCheckingIn) {
+        await ref.read(attendanceNotifierProvider.notifier).checkIn(
+          siteId, qrToken, lat: 17.446492, lng: 78.2821837,
+        );
+      } else {
+        await ref.read(attendanceNotifierProvider.notifier).checkOut(
+          siteId, qrToken, lat: 17.446492, lng: 78.2821837,
+        );
+      }
+      
+      final state = ref.read(attendanceNotifierProvider);
+      if (mounted && !state.hasError) {
+        // Mock position for UI dialog
+        final pos = Position(longitude: 78.2821837, latitude: 17.446492, timestamp: DateTime.now(), accuracy: 10, altitude: 0, heading: 0, speed: 0, speedAccuracy: 0, altitudeAccuracy: 0, headingAccuracy: 0);
+        _showSuccessDialog(siteId, pos);
+      } else {
+        _resetScanner();
+        if (mounted && state.hasError) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${state.error}'), backgroundColor: AppColors.danger));
+        }
+      }
+    } catch (e) {
+      _resetScanner();
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Simulate Failed: $e'), backgroundColor: AppColors.danger));
+    }
   }
 
   void _showSuccessDialog(String siteId, Position? position) {

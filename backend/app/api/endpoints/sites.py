@@ -165,15 +165,28 @@ def generate_qr(site_id: str, db: Session = Depends(get_db), current_user: User 
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
     
+    now_utc = datetime.now(timezone.utc)
+    from sqlalchemy import or_
+
     # Check existing valid QR
-    existing_qr = db.query(SiteQRCode).filter(SiteQRCode.site_id == site_id, SiteQRCode.expires_at > datetime.now(timezone.utc)).first()
-    if existing_qr:
-        return existing_qr
+    active_qrs = db.query(SiteQRCode).filter(
+        SiteQRCode.site_id == site_id,
+        or_(SiteQRCode.expires_at == None, SiteQRCode.expires_at > now_utc)
+    ).all()
+    
+    if len(active_qrs) == 1:
+        return active_qrs[0]
+    
+    # If multiple active QRs exist, or if none exist, expire all and create exactly one
+    db.query(SiteQRCode).filter(
+        SiteQRCode.site_id == site_id,
+        or_(SiteQRCode.expires_at == None, SiteQRCode.expires_at > now_utc)
+    ).update({"expires_at": now_utc}, synchronize_session=False)
 
     new_qr = SiteQRCode(
         site_id=site_id,
         qr_token=str(uuid.uuid4()),
-        expires_at=datetime.now(timezone.utc) + timedelta(days=1)
+        expires_at=now_utc + timedelta(days=365)
     )
     db.add(new_qr)
     db.commit()
@@ -186,13 +199,19 @@ def refresh_qr(site_id: str, db: Session = Depends(get_db), current_user: User =
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
     
-    # Invalidate old ones
-    db.query(SiteQRCode).filter(SiteQRCode.site_id == site_id).update({"expires_at": datetime.now(timezone.utc)})
+    now_utc = datetime.now(timezone.utc)
+    from sqlalchemy import or_
+
+    # Invalidate all currently active QRs
+    db.query(SiteQRCode).filter(
+        SiteQRCode.site_id == site_id,
+        or_(SiteQRCode.expires_at == None, SiteQRCode.expires_at > now_utc)
+    ).update({"expires_at": now_utc}, synchronize_session=False)
     
     new_qr = SiteQRCode(
         site_id=site_id,
         qr_token=str(uuid.uuid4()),
-        expires_at=datetime.now(timezone.utc) + timedelta(days=1)
+        expires_at=now_utc + timedelta(days=365)
     )
     db.add(new_qr)
     db.commit()
@@ -201,7 +220,14 @@ def refresh_qr(site_id: str, db: Session = Depends(get_db), current_user: User =
 
 @router.get("/{site_id}/qr", response_model=schemas.QRCodeResponse)
 def get_qr(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
-    qr = db.query(SiteQRCode).filter(SiteQRCode.site_id == site_id, SiteQRCode.expires_at > datetime.now(timezone.utc)).order_by(SiteQRCode.created_at.desc()).first()
+    now_utc = datetime.now(timezone.utc)
+    from sqlalchemy import or_
+    
+    qr = db.query(SiteQRCode).filter(
+        SiteQRCode.site_id == site_id, 
+        or_(SiteQRCode.expires_at == None, SiteQRCode.expires_at > now_utc)
+    ).order_by(SiteQRCode.created_at.desc()).first()
+    
     if not qr:
         raise HTTPException(status_code=404, detail="Active QR not found")
     return qr

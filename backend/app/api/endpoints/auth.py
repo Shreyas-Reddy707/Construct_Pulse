@@ -25,6 +25,7 @@ def login(login_data: schemas.FirebaseLogin, db: Session = Depends(get_db)):
     """
     Login using Firebase ID token
     """
+    phone_number = None
     if DEMO_AUTH and login_data.token.startswith("DEMO_TOKEN_"):
         phone_number = login_data.token.replace("DEMO_TOKEN_", "")
         firebase_uid = f"demo_uid_{phone_number}"
@@ -33,8 +34,16 @@ def login(login_data: schemas.FirebaseLogin, db: Session = Depends(get_db)):
         if not decoded:
             raise HTTPException(status_code=401, detail="Invalid Firebase token")
         firebase_uid = decoded.get("uid")
+        phone_number = decoded.get("phone_number")
         
     user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
+    
+    if not user and phone_number:
+        user = db.query(User).filter(User.phone_number == phone_number).first()
+        if user:
+            user.firebase_uid = firebase_uid
+            db.commit()
+
     if not user:
         raise HTTPException(status_code=404, detail="User not registered")
     

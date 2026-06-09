@@ -163,9 +163,44 @@ def seed_data(db: Session):
                 status="active"
             )
             db.add(site)
+            db.commit()
+            db.refresh(site)
             total_records["Site"] += 1
-        db.commit()
+            
+            # Generate exactly one QR for the new site
+            from app.models.models import SiteQRCode
+            new_qr = SiteQRCode(
+                site_id=site.id,
+                qr_token=str(uuid.uuid4()),
+                expires_at=datetime.now(timezone.utc) + timedelta(days=365)
+            )
+            db.add(new_qr)
+            db.commit()
+            
         sites = db.query(Site).filter_by(company_id=company.id).all()
+        
+        # Ensure ALL sites have exactly one active QR
+        from app.models.models import SiteQRCode
+        from sqlalchemy import or_
+        now_utc = datetime.now(timezone.utc)
+        for s in sites:
+            active_qrs = db.query(SiteQRCode).filter(
+                SiteQRCode.site_id == s.id,
+                or_(SiteQRCode.expires_at == None, SiteQRCode.expires_at > now_utc)
+            ).all()
+            if not active_qrs:
+                new_qr = SiteQRCode(
+                    site_id=s.id,
+                    qr_token=str(uuid.uuid4()),
+                    expires_at=now_utc + timedelta(days=365)
+                )
+                db.add(new_qr)
+                db.commit()
+            elif len(active_qrs) > 1:
+                # Keep one, expire the rest
+                for qr in active_qrs[1:]:
+                    qr.expires_at = now_utc
+                db.commit()
 
         # PHASE B: USERS
         # Target: 1 Admin, 1 Site Manager, 15 Workers
