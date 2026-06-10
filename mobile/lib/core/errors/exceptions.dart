@@ -13,7 +13,7 @@ class AppException implements Exception {
   });
 
   @override
-  String toString() => message;
+  String toString() => 'AppException($code): $message';
 }
 
 class NetworkException extends AppException {
@@ -90,12 +90,8 @@ AppException mapDioException(DioException e) {
             code: errorCode,
           );
         case 403:
-          String friendlyMsg = errorMsg is String && errorMsg != 'Server error' ? errorMsg : 'You don\'t have permission for this action.';
-          if (friendlyMsg == 'Worker not assigned to this site') {
-            friendlyMsg = 'You are not assigned to this site.';
-          }
           return AuthException(
-            message: friendlyMsg,
+            message: errorMsg is String && errorMsg != 'Server error' ? errorMsg : 'You don\'t have permission for this action.',
             code: 'FORBIDDEN',
           );
         case 404:
