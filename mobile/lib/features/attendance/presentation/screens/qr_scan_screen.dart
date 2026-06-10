@@ -113,7 +113,7 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
         if (mounted && state.hasError) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error: ${state.error}', style: const TextStyle(color: Colors.white)),
+              content: Text(state.error.toString(), style: const TextStyle(color: Colors.white)),
               backgroundColor: AppColors.danger,
             ),
           );
@@ -124,7 +124,7 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to process attendance: $e', style: const TextStyle(color: Colors.white)),
+            content: Text(e.toString(), style: const TextStyle(color: Colors.white)),
             backgroundColor: AppColors.danger,
           ),
         );
@@ -174,12 +174,12 @@ class _QrScanScreenState extends ConsumerState<QrScanScreen> {
       } else {
         _resetScanner();
         if (mounted && state.hasError) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${state.error}'), backgroundColor: AppColors.danger));
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.error.toString()), backgroundColor: AppColors.danger));
         }
       }
     } catch (e) {
       _resetScanner();
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Simulate Failed: $e'), backgroundColor: AppColors.danger));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString()), backgroundColor: AppColors.danger));
     }
   }
 

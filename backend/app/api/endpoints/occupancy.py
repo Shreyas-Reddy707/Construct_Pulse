@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from app.db.database import get_db
 from app.schemas import schemas
 from app.models.models import Site, User, Attendance, AttendanceStatus, Department, Contractor
@@ -10,9 +10,11 @@ from app.api.deps import get_current_user
 router = APIRouter()
 
 def compute_occupancy(site_id: str, db: Session, company_id: str | None = None):
+    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
     query = db.query(Attendance).filter(
         Attendance.site_id == site_id,
-        Attendance.status == AttendanceStatus.CHECKED_IN
+        Attendance.check_out_time.is_(None),
+        Attendance.check_in_time >= yesterday
     )
     if company_id:
         query = query.filter(Attendance.company_id == company_id)

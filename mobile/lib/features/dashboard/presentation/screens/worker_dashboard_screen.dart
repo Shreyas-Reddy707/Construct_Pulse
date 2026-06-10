@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
@@ -7,20 +8,46 @@ import '../../../../core/widgets/buttons.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../attendance/presentation/providers/attendance_providers.dart';
 import '../../../attendance/domain/entities/attendance.dart';
+import '../../../sites/presentation/providers/site_providers.dart';
+import '../../../sites/domain/entities/site.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../attendance/presentation/screens/attendance_history_screen.dart';
 import '../../../../core/constants/enums.dart';
 
 /// Worker Dashboard (Spec §71)
-class WorkerDashboardScreen extends ConsumerWidget {
+class WorkerDashboardScreen extends ConsumerStatefulWidget {
   const WorkerDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WorkerDashboardScreen> createState() => _WorkerDashboardScreenState();
+}
+
+class _WorkerDashboardScreenState extends ConsumerState<WorkerDashboardScreen> {
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Timer retained as fallback protection only. Primary invalidation happens via provider chains on check-in/out.
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      ref.invalidate(todayAttendanceSummaryProvider);
+      ref.invalidate(todayAttendanceProvider);
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final now = DateTime.now();
     final todayAttendanceAsync = ref.watch(todayAttendanceProvider);
+    final summaryAsync = ref.watch(todayAttendanceSummaryProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -35,10 +62,10 @@ class WorkerDashboardScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // ── Attendance Status Card ──────────────────
-              todayAttendanceAsync.when(
-                data: (attendanceList) => _buildAttendanceCard(context, attendanceList),
+              summaryAsync.when(
+                data: (summary) => _buildAttendanceCard(context, summary),
                 loading: () => const CircularProgressIndicator(),
-                error: (e, _) => const Text('Failed to load attendance'),
+                error: (e, _) => const Text('Failed to load attendance summary'),
               ),
               const SizedBox(height: 20),
 
@@ -78,36 +105,25 @@ class WorkerDashboardScreen extends ConsumerWidget {
               // ── KPI Cards ──────────────────────────────
               Text('Today\'s Summary', style: AppTypography.h4),
               const SizedBox(height: 12),
-              todayAttendanceAsync.when(
-                data: (attendanceList) {
-                  if (attendanceList.isEmpty) {
-                    return GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      childAspectRatio: 1.4,
-                      children: const [
-                        KpiCard(icon: Icons.access_time_rounded, value: '--', label: "Today's Hours", trend: '--', iconColor: AppColors.primary),
-                        KpiCard(icon: Icons.calendar_month_rounded, value: '--', label: 'Days This Month', iconColor: AppColors.success),
-                        KpiCard(icon: Icons.timer_rounded, value: '--', label: 'Overtime (Month)', trend: '--', iconColor: AppColors.secondary),
-                        KpiCard(icon: Icons.trending_up_rounded, value: '--', label: 'Total Hours', iconColor: AppColors.info),
-                      ],
-                    );
-                  }
-                  return GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisSpacing: 12,
-                    mainAxisSpacing: 12,
-                    childAspectRatio: 1.4,
+              summaryAsync.when(
+                data: (summary) {
+                  return Column(
                     children: [
-                      const KpiCard(icon: Icons.access_time_rounded, value: '8h', label: "Today's Hours", trend: '+0', iconColor: AppColors.primary),
-                      KpiCard(icon: Icons.calendar_month_rounded, value: '${attendanceList.length}', label: 'Days This Month', iconColor: AppColors.success),
-                      const KpiCard(icon: Icons.timer_rounded, value: '0h', label: 'Overtime (Month)', trend: '--', iconColor: AppColors.secondary),
-                      KpiCard(icon: Icons.trending_up_rounded, value: '${attendanceList.length * 8}h', label: 'Total Hours', iconColor: AppColors.info),
+                      Row(
+                        children: [
+                          Expanded(child: KpiCard(icon: Icons.access_time_rounded, value: '${summary['hours_today'] ?? '--'}h', label: "Today's Hours", iconColor: AppColors.primary)),
+                          const SizedBox(width: 12),
+                          const Expanded(child: KpiCard(icon: Icons.calendar_month_rounded, value: '--', label: 'Days This Month', iconColor: AppColors.success)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          const Expanded(child: KpiCard(icon: Icons.timer_rounded, value: '--', label: 'Overtime (Month)', iconColor: AppColors.secondary)),
+                          const SizedBox(width: 12),
+                          Expanded(child: KpiCard(icon: Icons.trending_up_rounded, value: '${summary['hours_today'] ?? '--'}h', label: 'Total Hours', iconColor: AppColors.info)),
+                        ],
+                      ),
                     ],
                   );
                 },
@@ -125,8 +141,8 @@ class WorkerDashboardScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // ── Assigned Site ───────────────────────────
-              todayAttendanceAsync.when(
-                data: (attendanceList) => _buildAssignedSite(attendanceList),
+              ref.watch(sitesProvider).when(
+                data: (sites) => _buildAssignedSite(sites),
                 loading: () => const CircularProgressIndicator(),
                 error: (e, _) => const SizedBox.shrink(),
               ),
@@ -172,13 +188,18 @@ class WorkerDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAttendanceCard(BuildContext context, List<Attendance> attendanceList) {
-    final hasActiveCheckIn = attendanceList.isNotEmpty && attendanceList.last.status == AttendanceStatus.checkedIn;
-    final currentStatus = hasActiveCheckIn ? '● Checked In' : '● Not Checked In';
+  Widget _buildAttendanceCard(BuildContext context, Map<String, dynamic> summary) {
+    final hasActiveCheckIn = summary['checked_in'] == true;
+    final currentStatus = hasActiveCheckIn ? '● On Site' : '● Off Site';
     final statusColor = hasActiveCheckIn ? AppColors.success : AppColors.textTertiary;
-    final inTime = attendanceList.isNotEmpty ? "${attendanceList.last.checkInTime.hour.toString().padLeft(2, '0')}:${attendanceList.last.checkInTime.minute.toString().padLeft(2, '0')}" : '--:--';
-    final hours = attendanceList.isNotEmpty && attendanceList.last.checkOutTime != null ? 
-        "${attendanceList.last.checkOutTime!.difference(attendanceList.last.checkInTime).inHours}h" : '--';
+    
+    String inTime = '--:--';
+    if (summary['check_in_time'] != null) {
+      final dt = DateTime.parse(summary['check_in_time']).toLocal();
+      inTime = "${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+    }
+    
+    final hours = summary['hours_today'] > 0 ? "${summary['hours_today']}h" : '--';
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -225,7 +246,7 @@ class WorkerDashboardScreen extends ConsumerWidget {
           Row(children: [
             _statusItem('Check In', inTime),
             const SizedBox(width: 24),
-            Expanded(child: _statusItem('Site', attendanceList.isNotEmpty ? (attendanceList.last.siteName ?? attendanceList.last.siteId) : 'N/A')),
+            Expanded(child: _statusItem('Site', summary['site_name'] ?? 'N/A')),
             const SizedBox(width: 12),
             _statusItem('Hours', hours),
           ]),
@@ -299,8 +320,8 @@ class WorkerDashboardScreen extends ConsumerWidget {
     ]);
   }
 
-  Widget _buildAssignedSite(List<Attendance> attendanceList) {
-    if (attendanceList.isEmpty) {
+  Widget _buildAssignedSite(List<Site> sites) {
+    if (sites.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -308,32 +329,40 @@ class WorkerDashboardScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
         ),
-        child: const Text('No site assigned / checked-in recently.'),
+        child: const Text('No site assigned.'),
       );
     }
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(children: [
-        Container(
-          width: 48, height: 48,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Assigned Sites', style: AppTypography.h4),
+        const SizedBox(height: 12),
+        ...sites.map((site) => Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.primarySurface,
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
           ),
-          child: const Icon(Icons.location_on_rounded, color: AppColors.primary),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(attendanceList.last.siteName ?? attendanceList.last.siteId, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
-          Text('Active Site', style: AppTypography.caption.copyWith(fontSize: 12)),
-        ])),
-        const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
-      ]),
+          child: Row(children: [
+            Container(
+              width: 48, height: 48,
+              decoration: BoxDecoration(
+                color: AppColors.primarySurface,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.location_on_rounded, color: AppColors.primary),
+            ),
+            const SizedBox(width: 12),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(site.name, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+              Text(site.address ?? 'No address', style: AppTypography.caption.copyWith(fontSize: 12)),
+            ])),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
+          ]),
+        )),
+      ],
     );
   }
 }

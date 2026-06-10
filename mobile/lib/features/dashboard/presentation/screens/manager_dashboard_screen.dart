@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -8,13 +9,34 @@ import '../providers/occupancy_providers.dart';
 import '../../domain/entities/occupancy_stats.dart';
 
 /// Site Manager Dashboard (Spec §75)
-class ManagerDashboardScreen extends ConsumerWidget {
-  final String siteId = 'S-12345'; // Default site for this demo
-
+class ManagerDashboardScreen extends ConsumerStatefulWidget {
   const ManagerDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ManagerDashboardScreen> createState() => _ManagerDashboardScreenState();
+}
+
+class _ManagerDashboardScreenState extends ConsumerState<ManagerDashboardScreen> {
+  final String siteId = 'S-12345'; // Default site for this demo
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Timer retained as fallback protection only. Primary invalidation happens via provider chains on check-in/out.
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      ref.invalidate(occupancyStatsProvider(siteId));
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final occupancyAsync = ref.watch(occupancyStatsProvider(siteId));
 
     return Scaffold(

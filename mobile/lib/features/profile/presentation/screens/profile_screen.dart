@@ -35,7 +35,7 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             Text(user?.fullName ?? 'Worker', style: AppTypography.h3),
             const SizedBox(height: 4),
-            Text(user?.designation ?? 'Construction Worker', style: AppTypography.caption),
+            Text(user?.role.name.toUpperCase() ?? 'Not Assigned', style: AppTypography.caption),
             const SizedBox(height: 4),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),

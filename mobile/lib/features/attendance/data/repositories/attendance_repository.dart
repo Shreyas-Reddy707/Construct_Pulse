@@ -61,6 +61,15 @@ class AttendanceRepository {
     }
   }
 
+  Future<Map<String, dynamic>> getMyTodayAttendanceSummary() async {
+    try {
+      final response = await _dio.get(ApiEndpoints.myTodayAttendance);
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
+  }
+
   Future<List<Attendance>> getHistory(String userId) async {
     try {
       final response = await _dio.get(ApiEndpoints.userAttendanceHistory(userId));

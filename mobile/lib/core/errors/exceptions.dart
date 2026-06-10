@@ -13,7 +13,7 @@ class AppException implements Exception {
   });
 
   @override
-  String toString() => 'AppException($code): $message';
+  String toString() => message;
 }
 
 class NetworkException extends AppException {
@@ -71,21 +71,31 @@ AppException mapDioException(DioException e) {
       final statusCode = e.response?.statusCode;
       final data = e.response?.data;
       final errorMsg = data is Map
-          ? (data['error']?['message'] ?? data['message'] ?? 'Server error')
+          ? (data['detail'] ?? data['error']?['message'] ?? data['message'] ?? 'Server error')
           : 'Server error';
       final errorCode = data is Map
           ? (data['error']?['code'] ?? 'SERVER_ERROR')
           : 'SERVER_ERROR';
 
       switch (statusCode) {
+        case 400:
+          return ServerException(
+            message: errorMsg is String ? errorMsg : errorMsg.toString(),
+            code: 'BAD_REQUEST',
+            statusCode: statusCode,
+          );
         case 401:
           return AuthException(
-            message: errorMsg,
+            message: errorMsg is String ? errorMsg : errorMsg.toString(),
             code: errorCode,
           );
         case 403:
-          return const AuthException(
-            message: 'You don\'t have permission for this action.',
+          String friendlyMsg = errorMsg is String && errorMsg != 'Server error' ? errorMsg : 'You don\'t have permission for this action.';
+          if (friendlyMsg == 'Worker not assigned to this site') {
+            friendlyMsg = 'You are not assigned to this site.';
+          }
+          return AuthException(
+            message: friendlyMsg,
             code: 'FORBIDDEN',
           );
         case 404:
@@ -96,13 +106,13 @@ AppException mapDioException(DioException e) {
           );
         case 409:
           return ServerException(
-            message: errorMsg,
+            message: errorMsg is String ? errorMsg : errorMsg.toString(),
             code: 'CONFLICT',
             statusCode: statusCode,
           );
         case 422:
           return ValidationException(
-            message: errorMsg,
+            message: errorMsg is String ? errorMsg : errorMsg.toString(),
             code: errorCode,
           );
         case 429:
@@ -113,7 +123,7 @@ AppException mapDioException(DioException e) {
           );
         default:
           return ServerException(
-            message: errorMsg,
+            message: errorMsg is String ? errorMsg : errorMsg.toString(),
             statusCode: statusCode,
           );
       }

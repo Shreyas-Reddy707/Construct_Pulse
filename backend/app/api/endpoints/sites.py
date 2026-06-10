@@ -14,7 +14,9 @@ router = APIRouter()
 @router.get("/", response_model=List[schemas.SiteResponse])
 def read_sites(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     query = db.query(Site)
-    if current_user.company_id:
+    if current_user.role == UserRole.WORKER:
+        query = query.filter(Site.assigned_workers.any(User.id == current_user.id))
+    elif current_user.company_id:
         query = query.filter(Site.company_id == current_user.company_id)
     return query.offset(skip).limit(limit).all()
 
@@ -161,7 +163,10 @@ def get_assignments(site_id: str, db: Session = Depends(get_db), current_user: U
 
 @router.post("/{site_id}/generate-qr", response_model=schemas.QRCodeResponse)
 def generate_qr(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
-    site = db.query(Site).filter(Site.id == site_id).first()
+    site = db.query(Site).filter(Site.id == site_id)
+    if current_user.company_id:
+        site = site.filter(Site.company_id == current_user.company_id)
+    site = site.first()
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
     
@@ -195,7 +200,10 @@ def generate_qr(site_id: str, db: Session = Depends(get_db), current_user: User 
 
 @router.post("/{site_id}/refresh-qr", response_model=schemas.QRCodeResponse)
 def refresh_qr(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
-    site = db.query(Site).filter(Site.id == site_id).first()
+    site = db.query(Site).filter(Site.id == site_id)
+    if current_user.company_id:
+        site = site.filter(Site.company_id == current_user.company_id)
+    site = site.first()
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
     
@@ -220,6 +228,13 @@ def refresh_qr(site_id: str, db: Session = Depends(get_db), current_user: User =
 
 @router.get("/{site_id}/qr", response_model=schemas.QRCodeResponse)
 def get_qr(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
+    site = db.query(Site).filter(Site.id == site_id)
+    if current_user.company_id:
+        site = site.filter(Site.company_id == current_user.company_id)
+    site = site.first()
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+
     now_utc = datetime.now(timezone.utc)
     from sqlalchemy import or_
     

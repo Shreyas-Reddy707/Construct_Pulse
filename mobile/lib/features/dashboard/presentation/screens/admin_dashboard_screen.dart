@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -15,11 +16,36 @@ final adminDashboardSummaryProvider = FutureProvider.autoDispose<Map<String, dyn
   return response.data as Map<String, dynamic>;
 });
 
-class AdminDashboardScreen extends ConsumerWidget {
+class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+}
+
+class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Timer retained as fallback protection only. Primary invalidation happens via provider chains on check-in/out.
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      ref.invalidate(adminDashboardSummaryProvider);
+      ref.invalidate(occupancyProvider);
+      ref.invalidate(liveAttendanceProvider);
+      ref.invalidate(companyAttendanceHistoryProvider);
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final summaryAsync = ref.watch(adminDashboardSummaryProvider);
     final occupancyAsync = ref.watch(occupancyProvider);
 

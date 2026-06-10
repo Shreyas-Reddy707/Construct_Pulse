@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import cast, Date
 from app.db.database import get_db
-from app.models.models import User, Company, Site, WorkerStatus, Attendance
+from app.models.models import User, Company, Site, WorkerStatus, Attendance, AttendanceStatus
 from app.api.deps import get_current_user, RoleChecker
 from datetime import datetime, date, timedelta, timezone
 
@@ -28,9 +28,9 @@ def get_dashboard_summary(
         attendance_query = attendance_query.join(User).filter(User.company_id == company_id)
 
     total_workers = users_query.count()
-    pending_workers = users_query.filter(User.status == "pending").count()
-    approved_workers = users_query.filter(User.status == "approved").count()
-    suspended_workers = users_query.filter(User.status == "suspended").count()
+    pending_workers = users_query.filter(User.status == WorkerStatus.PENDING).count()
+    approved_workers = users_query.filter(User.status == WorkerStatus.APPROVED).count()
+    suspended_workers = users_query.filter(User.status == WorkerStatus.SUSPENDED).count()
 
     active_sites = sites_query.filter(Site.status == "active").count()
 
@@ -48,7 +48,7 @@ def get_dashboard_summary(
     # "Workers on site" must exclude stale records older than 24 hours
     workers_on_site = attendance_query.filter(
         Attendance.check_out_time == None,
-        Attendance.status == "checked_in",
+        Attendance.status == AttendanceStatus.CHECKED_IN,
         Attendance.check_in_time >= yesterday_utc
     ).count()
 

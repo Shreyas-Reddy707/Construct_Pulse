@@ -7,8 +7,8 @@ import csv
 import io
 from app.db.database import get_db
 from app.schemas import schemas
-from app.models.models import Site, User, Attendance, SiteQRCode, AttendanceStatus
-from app.api.deps import get_current_user
+from app.models.models import Site, User, Attendance, SiteQRCode, AttendanceStatus, UserRole
+from app.api.deps import get_current_user, RoleChecker
 
 router = APIRouter()
 
@@ -96,24 +96,63 @@ def check_out(checkout_data: schemas.AttendanceCheckOut, db: Session = Depends(g
     db.refresh(attendance)
     return attendance
 
+@router.get("/me/today")
+def get_my_today_attendance(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    all_today = db.query(Attendance).filter(
+        Attendance.user_id == current_user.id,
+        Attendance.check_in_time >= today_start
+    ).order_by(Attendance.check_in_time.asc()).all()
+    
+    hours_today = 0.0
+    for a in all_today:
+        out_time = a.check_out_time or datetime.now(timezone.utc)
+        duration = (out_time - a.check_in_time).total_seconds() / 3600.0
+        hours_today += duration
+        
+    latest_att = all_today[-1] if all_today else None
+    
+    if not latest_att:
+        return {
+            "checked_in": False,
+            "site_id": None,
+            "site_name": None,
+            "check_in_time": None,
+            "check_out_time": None,
+            "hours_today": round(hours_today, 2)
+        }
+        
+    site = db.query(Site).filter(Site.id == latest_att.site_id).first()
+    return {
+        "checked_in": latest_att.check_out_time is None,
+        "site_id": latest_att.site_id,
+        "site_name": site.name if site else None,
+        "check_in_time": latest_att.check_in_time.isoformat() if latest_att.check_in_time else None,
+        "check_out_time": latest_att.check_out_time.isoformat() if latest_att.check_out_time else None,
+        "hours_today": round(hours_today, 2)
+    }
+
 @router.get("/worker/{worker_id}", response_model=List[schemas.AttendanceResponse])
 def get_worker_attendance(worker_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role == UserRole.WORKER and worker_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to view other workers' attendance")
     query = db.query(Attendance).filter(Attendance.user_id == worker_id)
     if current_user.company_id:
         query = query.filter(Attendance.company_id == current_user.company_id)
     return query.all()
 
 @router.get("/site/{site_id}", response_model=List[schemas.AttendanceResponse])
-def get_site_attendance(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_site_attendance(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR, UserRole.SYSTEM_ADMIN]))):
     query = db.query(Attendance).filter(Attendance.site_id == site_id)
     if current_user.company_id:
         query = query.filter(Attendance.company_id == current_user.company_id)
     return query.all()
 @router.get("/live", response_model=List[schemas.AttendanceResponse])
-def get_live_attendance(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_live_attendance(db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR, UserRole.SYSTEM_ADMIN]))):
     yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
     query = db.query(Attendance).join(User).filter(
-        Attendance.status == AttendanceStatus.CHECKED_IN,
+        Attendance.check_out_time.is_(None),
         Attendance.check_in_time >= yesterday
     )
     if current_user.company_id:
@@ -142,7 +181,7 @@ def get_live_attendance(db: Session = Depends(get_db), current_user: User = Depe
     return attendances
 
 @router.get("/occupancy", response_model=List[schemas.SiteOccupancyResponse])
-def get_occupancy(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_occupancy(db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR, UserRole.SYSTEM_ADMIN]))):
     sites_query = db.query(Site)
     if current_user.company_id:
         sites_query = sites_query.filter(Site.company_id == current_user.company_id)
@@ -153,14 +192,14 @@ def get_occupancy(db: Session = Depends(get_db), current_user: User = Depends(ge
     for site in sites:
         count = db.query(Attendance).filter(
             Attendance.site_id == site.id,
-            Attendance.status == AttendanceStatus.CHECKED_IN,
+            Attendance.check_out_time.is_(None),
             Attendance.check_in_time >= yesterday
         ).count()
         results.append({"site_id": site.id, "site_name": site.name, "workers_on_site": count})
     return results
 
 @router.get("/history", response_model=List[schemas.AttendanceResponse])
-def get_company_attendance_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_company_attendance_history(db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR, UserRole.SYSTEM_ADMIN]))):
     query = db.query(Attendance)
     if current_user.company_id:
         query = query.filter(Attendance.company_id == current_user.company_id)
@@ -189,6 +228,8 @@ def get_company_attendance_history(db: Session = Depends(get_db), current_user: 
 
 @router.get("/history/{worker_id}", response_model=List[schemas.AttendanceResponse])
 def get_attendance_history(worker_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.role == UserRole.WORKER and worker_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to view other workers' attendance")
     query = db.query(Attendance).filter(Attendance.user_id == worker_id)
     if current_user.company_id:
         query = query.filter(Attendance.company_id == current_user.company_id)
@@ -216,7 +257,7 @@ def get_attendance_history(worker_id: str, db: Session = Depends(get_db), curren
     return attendances
 
 @router.get("/export/csv")
-def export_attendance_csv(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def export_attendance_csv(db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR, UserRole.SYSTEM_ADMIN]))):
     query = db.query(Attendance).join(User).join(Site)
     if current_user.company_id:
         query = query.filter(Attendance.company_id == current_user.company_id)

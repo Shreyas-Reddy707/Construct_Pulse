@@ -31,7 +31,8 @@ class LiveAttendanceScreen extends ConsumerWidget {
               itemBuilder: (context, index) {
                 final record = filteredAttendance[index];
                 final duration = DateTime.now().difference(record.checkInTime);
-                final durationStr = '${duration.inHours}h';
+                final decimalHours = duration.inMinutes / 60.0;
+                final durationStr = '${decimalHours.toStringAsFixed(1)}h';
                 
                 final workerName = record.userName ?? 'Unknown Worker';
                 final departmentName = record.departmentName ?? 'General Worker';
