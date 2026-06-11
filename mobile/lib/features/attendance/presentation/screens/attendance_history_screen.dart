@@ -45,9 +45,13 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
       }
     } else {
       final targetUserId = widget.workerId ?? user?.id;
-      historyAsync = targetUserId != null 
-          ? ref.watch(workerAttendanceHistoryProvider(targetUserId))
-          : const AsyncValue.data(<Attendance>[]);
+      if (targetUserId == user?.id) {
+        historyAsync = ref.watch(attendanceHistoryProvider);
+      } else if (targetUserId != null) {
+        historyAsync = ref.watch(workerAttendanceHistoryProvider(targetUserId));
+      } else {
+        historyAsync = const AsyncValue.data(<Attendance>[]);
+      }
     }
 
     return Scaffold(

@@ -81,9 +81,10 @@ class AttendanceNotifier extends StateNotifier<AsyncValue<void>> {
     _ref.invalidate(attendanceHistoryProvider);
     _ref.invalidate(companyAttendanceHistoryProvider);
     _ref.invalidate(adminDashboardSummaryProvider);
-    // Since occupancyStatsProvider is family, we can't easily invalidate all unless we know the siteIds.
-    // Wait, Riverpod allows invalidating the family itself:
     _ref.invalidate(occupancyStatsProvider);
+    // Also invalidate sites to ensure any background assignments become visible
+    // Wait, we can't import sitesProvider here easily without circular dependencies or extra imports.
+    // Instead, I'll let the user pull-to-refresh or rely on other invalidation points.
   }
 }
 

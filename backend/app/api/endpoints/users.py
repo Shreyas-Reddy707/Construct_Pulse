@@ -20,7 +20,7 @@ def read_users(
     db: Session = Depends(get_db),
     current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR]))
 ):
-    query = db.query(User)
+    query = db.query(User).filter(User.role == UserRole.WORKER)
     if current_user.company_id:
         query = query.filter(User.company_id == current_user.company_id)
     if status:

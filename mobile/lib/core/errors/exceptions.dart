@@ -13,7 +13,7 @@ class AppException implements Exception {
   });
 
   @override
-  String toString() => 'AppException($code): $message';
+  String toString() => message;
 }
 
 class NetworkException extends AppException {

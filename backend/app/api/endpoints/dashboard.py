@@ -18,7 +18,7 @@ def get_dashboard_summary(
         # System Admin sees all by default unless we pass a param
         pass
 
-    users_query = db.query(User)
+    users_query = db.query(User).filter(User.role == UserRole.WORKER)
     sites_query = db.query(Site)
     attendance_query = db.query(Attendance)
     
