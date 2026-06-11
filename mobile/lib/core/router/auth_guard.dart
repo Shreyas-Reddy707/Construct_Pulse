@@ -10,10 +10,18 @@ String? authGuard(BuildContext context, GoRouterState state, AuthState authState
 
   // Redirect from splash once session check is complete
   if (path == '/splash') {
-    if (status == AuthStatus.authenticated) return '/';
-    if (status == AuthStatus.unauthenticated) return '/auth/login';
-    return null;
+  if (status == AuthStatus.authenticated) return '/';
+
+  if (status == AuthStatus.pendingApproval) {
+    return '/auth/pending';
   }
+
+  if (status == AuthStatus.unauthenticated) {
+    return '/auth/login';
+  }
+
+  return null;
+}
 
   // Auth redirects
   if (status == AuthStatus.unauthenticated) {

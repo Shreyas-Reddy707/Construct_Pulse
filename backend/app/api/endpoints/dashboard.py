@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import cast, Date
 from app.db.database import get_db
-from app.models.models import User, Company, Site, WorkerStatus, Attendance, AttendanceStatus
+from app.models.models import User, Company, Site, WorkerStatus, Attendance, AttendanceStatus, UserRole
 from app.api.deps import get_current_user, RoleChecker
 from datetime import datetime, date, timedelta, timezone
 
@@ -31,6 +31,7 @@ def get_dashboard_summary(
     pending_workers = users_query.filter(User.status == WorkerStatus.PENDING).count()
     approved_workers = users_query.filter(User.status == WorkerStatus.APPROVED).count()
     suspended_workers = users_query.filter(User.status == WorkerStatus.SUSPENDED).count()
+    rejected_workers = users_query.filter(User.status == WorkerStatus.REJECTED).count()
 
     active_sites = sites_query.filter(Site.status == "active").count()
 
@@ -45,11 +46,9 @@ def get_dashboard_summary(
         cast(Attendance.check_out_time, Date) == today_utc
     ).count()
     
-    # "Workers on site" must exclude stale records older than 24 hours
     workers_on_site = attendance_query.filter(
         Attendance.check_out_time == None,
-        Attendance.status == AttendanceStatus.CHECKED_IN,
-        Attendance.check_in_time >= yesterday_utc
+        Attendance.status == AttendanceStatus.CHECKED_IN
     ).count()
 
     return {
@@ -57,6 +56,7 @@ def get_dashboard_summary(
         "pending_workers": pending_workers,
         "approved_workers": approved_workers,
         "suspended_workers": suspended_workers,
+        "rejected_workers": rejected_workers,
         "checked_in_today": checked_in_today,
         "checked_out_today": checked_out_today,
         "active_sites": active_sites,

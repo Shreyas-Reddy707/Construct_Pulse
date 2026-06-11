@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from typing import List
 from datetime import datetime, timezone, timedelta
 import math
@@ -102,7 +103,10 @@ def get_my_today_attendance(db: Session = Depends(get_db), current_user: User = 
     
     all_today = db.query(Attendance).filter(
         Attendance.user_id == current_user.id,
-        Attendance.check_in_time >= today_start
+        or_(
+            Attendance.check_in_time >= today_start,
+            Attendance.check_out_time.is_(None)
+        )
     ).order_by(Attendance.check_in_time.asc()).all()
     
     hours_today = 0.0
@@ -150,10 +154,8 @@ def get_site_attendance(site_id: str, db: Session = Depends(get_db), current_use
     return query.all()
 @router.get("/live", response_model=List[schemas.AttendanceResponse])
 def get_live_attendance(db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR, UserRole.SYSTEM_ADMIN]))):
-    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
     query = db.query(Attendance).join(User).filter(
-        Attendance.check_out_time.is_(None),
-        Attendance.check_in_time >= yesterday
+        Attendance.check_out_time.is_(None)
     )
     if current_user.company_id:
         query = query.filter(Attendance.company_id == current_user.company_id)
@@ -186,14 +188,12 @@ def get_occupancy(db: Session = Depends(get_db), current_user: User = Depends(Ro
     if current_user.company_id:
         sites_query = sites_query.filter(Site.company_id == current_user.company_id)
     
-    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
     sites = sites_query.all()
     results = []
     for site in sites:
         count = db.query(Attendance).filter(
             Attendance.site_id == site.id,
-            Attendance.check_out_time.is_(None),
-            Attendance.check_in_time >= yesterday
+            Attendance.check_out_time.is_(None)
         ).count()
         results.append({"site_id": site.id, "site_name": site.name, "workers_on_site": count})
     return results

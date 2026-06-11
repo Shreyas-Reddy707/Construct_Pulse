@@ -14,7 +14,7 @@ enum UserRole {
   final String label;
 
   static UserRole fromValue(String value) =>
-      UserRole.values.firstWhere((e) => e.value == value,
+      UserRole.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => UserRole.worker);
 }
 
@@ -29,7 +29,7 @@ enum UserStatus {
   final String label;
 
   static UserStatus fromValue(String value) =>
-      UserStatus.values.firstWhere((e) => e.value == value,
+      UserStatus.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => UserStatus.pending);
 }
 
@@ -44,7 +44,7 @@ enum TaskStatus {
   final String label;
 
   static TaskStatus fromValue(String value) =>
-      TaskStatus.values.firstWhere((e) => e.value == value,
+      TaskStatus.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => TaskStatus.notStarted);
 }
 
@@ -59,7 +59,7 @@ enum TaskPriority {
   final String label;
 
   static TaskPriority fromValue(String value) =>
-      TaskPriority.values.firstWhere((e) => e.value == value,
+      TaskPriority.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => TaskPriority.medium);
 }
 
@@ -74,7 +74,7 @@ enum PlanStatus {
   final String label;
 
   static PlanStatus fromValue(String value) =>
-      PlanStatus.values.firstWhere((e) => e.value == value,
+      PlanStatus.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => PlanStatus.draft);
 }
 
@@ -87,7 +87,7 @@ enum AttendanceStatus {
   final String label;
 
   static AttendanceStatus fromValue(String value) =>
-      AttendanceStatus.values.firstWhere((e) => e.value == value,
+      AttendanceStatus.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => AttendanceStatus.checkedOut);
 }
 
@@ -102,7 +102,7 @@ enum MusterStatus {
   final String label;
 
   static MusterStatus fromValue(String value) =>
-      MusterStatus.values.firstWhere((e) => e.value == value,
+      MusterStatus.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => MusterStatus.missing);
 }
 
@@ -119,7 +119,7 @@ enum IncidentType {
   final String label;
 
   static IncidentType fromValue(String value) =>
-      IncidentType.values.firstWhere((e) => e.value == value,
+      IncidentType.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => IncidentType.fire);
 }
 
@@ -133,7 +133,7 @@ enum PayType {
   final String label;
 
   static PayType fromValue(String value) =>
-      PayType.values.firstWhere((e) => e.value == value,
+      PayType.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => PayType.daily);
 }
 
@@ -151,7 +151,7 @@ enum NotificationCategory {
   final String label;
 
   static NotificationCategory fromValue(String value) =>
-      NotificationCategory.values.firstWhere((e) => e.value == value,
+      NotificationCategory.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => NotificationCategory.system);
 }
 
@@ -166,7 +166,7 @@ enum NotificationPriority {
   final String label;
 
   static NotificationPriority fromValue(String value) =>
-      NotificationPriority.values.firstWhere((e) => e.value == value,
+      NotificationPriority.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => NotificationPriority.medium);
 }
 
@@ -187,7 +187,7 @@ enum ReportType {
   final String label;
 
   static ReportType fromValue(String value) =>
-      ReportType.values.firstWhere((e) => e.value == value,
+      ReportType.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => ReportType.attendance);
 }
 
@@ -212,7 +212,7 @@ enum ReportStatus {
   final String label;
 
   static ReportStatus fromValue(String value) =>
-      ReportStatus.values.firstWhere((e) => e.value == value,
+      ReportStatus.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => ReportStatus.pending);
 }
 
@@ -225,6 +225,6 @@ enum SiteStatus {
   final String label;
 
   static SiteStatus fromValue(String value) =>
-      SiteStatus.values.firstWhere((e) => e.value == value,
+      SiteStatus.values.firstWhere((e) => e.value.toLowerCase() == value.toLowerCase(),
           orElse: () => SiteStatus.active);
 }

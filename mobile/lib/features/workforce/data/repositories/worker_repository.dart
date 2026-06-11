@@ -53,16 +53,6 @@ class WorkerRepository {
     }
   }
 
-  Future<List<User>> getPendingWorkers() async {
-    try {
-      final response = await _dio.get('${ApiEndpoints.users}/pending');
-      final data = response.data as List;
-      return data.map((json) => User.fromJson(json)).toList();
-    } on DioException catch (e) {
-      throw mapDioException(e);
-    }
-  }
-
   Future<User> approveWorker(String userId) async {
     try {
       final response = await _dio.put('${ApiEndpoints.users}/$userId/approve');

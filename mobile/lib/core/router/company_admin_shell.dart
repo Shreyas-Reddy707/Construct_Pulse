@@ -5,7 +5,6 @@ import '../constants/app_constants.dart';
 import '../../features/dashboard/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/sites/presentation/screens/sites_list_screen.dart';
 import '../../features/workforce/presentation/screens/workforce_directory_screen.dart';
-import '../../features/workforce/presentation/screens/pending_workers_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 
 class CompanyAdminShell extends StatefulWidget {
@@ -22,7 +21,7 @@ class _CompanyAdminShellState extends State<CompanyAdminShell> {
     AdminDashboardScreen(),
     SitesListScreen(),
     WorkforceDirectoryScreen(),
-    PendingWorkersScreen(),
+    WorkforceDirectoryScreen(initialStatus: 'pending'),
     ProfileScreen(),
   ];
 

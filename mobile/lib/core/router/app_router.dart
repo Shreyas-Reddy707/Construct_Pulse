@@ -18,7 +18,7 @@ import '../../features/sites/presentation/screens/site_detail_screen.dart';
 import '../../features/sites/presentation/screens/site_qr_screen.dart';
 import '../../features/sites/presentation/screens/site_create_screen.dart';
 import '../../features/sites/presentation/screens/sites_list_screen.dart';
-import '../../features/workforce/presentation/screens/pending_workers_screen.dart';
+
 import '../../features/workforce/presentation/screens/workforce_directory_screen.dart';
 import '../../features/attendance/presentation/screens/live_attendance_screen.dart';
 import '../../features/attendance/presentation/screens/attendance_history_screen.dart';
@@ -74,10 +74,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/sites/:id/qr',
         builder: (_, state) => SiteQrScreen(siteId: state.pathParameters['id']!),
       ),
-      GoRoute(
-        path: '/pending-workers',
-        builder: (_, __) => const PendingWorkersScreen(),
-      ),
+
       GoRoute(
         path: '/workforce',
         builder: (_, state) => WorkforceDirectoryScreen(initialStatus: state.uri.queryParameters['status']),
@@ -88,7 +85,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/attendance-history',
-        builder: (_, __) => const AttendanceHistoryScreen(),
+        builder: (_, state) => AttendanceHistoryScreen(
+          initialFilter: state.uri.queryParameters['filter'],
+        ),
       ),
       GoRoute(
         path: '/attendance-history/:workerId',

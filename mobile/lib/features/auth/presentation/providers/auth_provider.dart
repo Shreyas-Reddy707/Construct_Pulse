@@ -77,10 +77,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final hasSession = await _repo.hasValidSession();
       if (hasSession) {
         final user = await _repo.getCurrentUser();
-        state = state.copyWith(
-          status: AuthStatus.authenticated,
-          user: user,
-        );
+        if (user.isPending) {
+          state = state.copyWith(
+            status: AuthStatus.pendingApproval,
+            user: user,
+          );
+        } else {
+          state = state.copyWith(
+            status: AuthStatus.authenticated,
+            user: user,
+          );
+        }
       } else {
         state = state.copyWith(status: AuthStatus.unauthenticated);
       }
@@ -223,10 +230,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (AppConstants.demoAuth) {
         try {
           final user = await _repo.getCurrentUser();
-          state = state.copyWith(
-            status: AuthStatus.authenticated,
-            user: user,
-          );
+          if (user.isPending) {
+            state = state.copyWith(
+              status: AuthStatus.pendingApproval,
+              user: user,
+            );
+          } else {
+            state = state.copyWith(
+              status: AuthStatus.authenticated,
+              user: user,
+            );
+          }
         } catch (_) {
           // If fetching user fails, fallback to pending
           state = state.copyWith(status: AuthStatus.pendingApproval);
@@ -239,6 +253,22 @@ class AuthNotifier extends StateNotifier<AuthState> {
         status: AuthStatus.error,
         errorMessage: e.toString(),
       );
+    }
+  }
+
+  /// Check Approval Status
+  Future<void> checkApprovalStatus() async {
+    try {
+      final user = await _repo.getCurrentUser();
+      if (user.isApproved) {
+        state = state.copyWith(
+          status: AuthStatus.authenticated,
+          user: user,
+        );
+      }
+    } catch (e) {
+      // 400 Inactive user means still pending or suspended
+      debugPrint('Approval check failed: $e');
     }
   }
 

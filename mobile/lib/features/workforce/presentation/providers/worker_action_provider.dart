@@ -1,13 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/worker_repository.dart';
-import '../../../auth/domain/entities/user.dart';
 import '../../../dashboard/presentation/screens/admin_dashboard_screen.dart';
+
 import 'worker_providers.dart';
 
-final pendingWorkersProvider = FutureProvider.autoDispose<List<User>>((ref) async {
-  final repository = ref.read(workerRepositoryProvider);
-  return repository.getPendingWorkers();
-});
 
 class WorkerActionNotifier extends StateNotifier<AsyncValue<void>> {
   final WorkerRepository _repository;
@@ -16,7 +12,6 @@ class WorkerActionNotifier extends StateNotifier<AsyncValue<void>> {
   WorkerActionNotifier(this._repository, this._ref) : super(const AsyncValue.data(null));
 
   void _invalidateProviders() {
-    _ref.invalidate(pendingWorkersProvider);
     _ref.invalidate(workersListProvider);
     _ref.invalidate(adminDashboardSummaryProvider);
   }

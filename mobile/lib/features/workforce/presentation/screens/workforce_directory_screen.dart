@@ -6,7 +6,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/common_widgets.dart';
 import '../../../../core/constants/enums.dart';
 import '../providers/worker_providers.dart';
-import '../providers/pending_workers_provider.dart';
+import '../providers/worker_action_provider.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
 /// Worker List Screen (Workforce Directory)
@@ -63,7 +63,7 @@ class _WorkforceDirectoryScreenState extends ConsumerState<WorkforceDirectoryScr
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              children: ['All', 'Approved', 'Pending', 'Suspended']
+              children: ['All', 'Approved', 'Pending', 'Suspended', 'Rejected']
                   .map((f) => Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: FilterChip(
@@ -133,7 +133,10 @@ class _WorkforceDirectoryScreenState extends ConsumerState<WorkforceDirectoryScr
                                 children: [
                                   Text(w.fullName, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
                                   const SizedBox(width: 8),
-                                  if (w.isPending) StatusBadge.pending() else StatusBadge.approved(),
+                                  if (w.isPending) StatusBadge.pending()
+                                  else if (w.isSuspended) StatusBadge.suspended()
+                                  else if (w.isRejected) StatusBadge.rejected()
+                                  else StatusBadge.approved(),
                                 ],
                               ),
                               const SizedBox(height: 2),
@@ -150,6 +153,8 @@ class _WorkforceDirectoryScreenState extends ConsumerState<WorkforceDirectoryScr
                               context.push('/workforce/${w.id}');
                             } else if (value == 'approve') {
                               await ref.read(workerActionNotifierProvider.notifier).approve(w.id);
+                            } else if (value == 'reject') {
+                              await ref.read(workerActionNotifierProvider.notifier).reject(w.id);
                             } else if (value == 'suspend') {
                               await ref.read(workerActionNotifierProvider.notifier).suspend(w.id);
                             } else if (value == 'reactivate') {
@@ -163,11 +168,13 @@ class _WorkforceDirectoryScreenState extends ConsumerState<WorkforceDirectoryScr
                             
                             return [
                               const PopupMenuItem(value: 'view', child: Text('View Profile')),
-                              if (w.isPending)
+                              if (w.isPending) ...[
                                 const PopupMenuItem(value: 'approve', child: Text('Approve')),
-                              if (!w.isPending && !w.isSuspended && !isSelf && !isAdmin)
+                                const PopupMenuItem(value: 'reject', child: Text('Reject')),
+                              ],
+                              if (!w.isPending && !w.isSuspended && !w.isRejected && !isSelf && !isAdmin)
                                 const PopupMenuItem(value: 'suspend', child: Text('Suspend')),
-                              if (w.isSuspended && !isSelf && !isAdmin)
+                              if ((w.isSuspended || w.isRejected) && !isSelf && !isAdmin)
                                 const PopupMenuItem(value: 'reactivate', child: Text('Reactivate')),
                             ];
                           },

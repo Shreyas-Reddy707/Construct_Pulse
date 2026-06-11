@@ -13,20 +13,22 @@ import '../../../workforce/presentation/providers/worker_providers.dart';
 /// Attendance History Screen
 class AttendanceHistoryScreen extends ConsumerStatefulWidget {
   final String? workerId;
-  const AttendanceHistoryScreen({super.key, this.workerId});
+  final String? initialFilter;
+  const AttendanceHistoryScreen({super.key, this.workerId, this.initialFilter});
 
   @override
   ConsumerState<AttendanceHistoryScreen> createState() => _AttendanceHistoryScreenState();
 }
 
 class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScreen> {
-  String _filter = 'All Time';
+  late String _filter;
   String? _selectedWorkerId;
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
+    _filter = widget.initialFilter ?? 'All Time';
     _selectedWorkerId = widget.workerId;
   }
 
@@ -82,9 +84,10 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 _filterChip('All Time', _filter == 'All Time', () => setState(() => _filter = 'All Time')),
+                _filterChip('Today', _filter == 'Today', () => setState(() => _filter = 'Today')),
+                _filterChip('Completed Today', _filter == 'Completed Today', () => setState(() => _filter = 'Completed Today')),
                 _filterChip('This Month', _filter == 'This Month', () => setState(() => _filter = 'This Month')),
                 _filterChip('Last Month', _filter == 'Last Month', () => setState(() => _filter = 'Last Month')),
-                _filterChip('Custom', _filter == 'Custom', () => setState(() => _filter = 'Custom')),
               ],
             ),
           ),
@@ -126,7 +129,13 @@ class _AttendanceHistoryScreenState extends ConsumerState<AttendanceHistoryScree
                 var filtered = records;
                 
                 // Date filtering
-                if (_filter == 'This Month') {
+                if (_filter == 'Today') {
+                  final now = DateTime.now();
+                  filtered = filtered.where((r) => r.checkInTime.year == now.year && r.checkInTime.month == now.month && r.checkInTime.day == now.day).toList();
+                } else if (_filter == 'Completed Today') {
+                  final now = DateTime.now();
+                  filtered = filtered.where((r) => r.checkOutTime != null && r.checkInTime.year == now.year && r.checkInTime.month == now.month && r.checkInTime.day == now.day).toList();
+                } else if (_filter == 'This Month') {
                   final now = DateTime.now();
                   filtered = filtered.where((r) => r.checkInTime.month == now.month && r.checkInTime.year == now.year).toList();
                 } else if (_filter == 'Last Month') {

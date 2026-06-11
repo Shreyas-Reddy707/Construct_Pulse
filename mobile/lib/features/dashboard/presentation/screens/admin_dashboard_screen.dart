@@ -79,7 +79,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => context.push('/pending-workers'),
+                              onTap: () => context.push('/workforce?status=pending'),
                               child: KpiCard(label: 'Pending', value: data['pending_workers'].toString(), icon: Icons.pending_actions_rounded, iconColor: AppColors.warning),
                             )
                           ),
@@ -103,6 +103,19 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onTap: () => context.push('/workforce?status=rejected'),
+                              child: KpiCard(label: 'Rejected', value: data['rejected_workers'].toString(), icon: Icons.cancel_rounded, iconColor: AppColors.textTertiary),
+                            )
+                          ),
+                          const SizedBox(width: 12),
+                          const Expanded(child: SizedBox()),
+                        ],
+                      ),
                       const SizedBox(height: 24),
                       Text('Attendance Today', style: AppTypography.h4),
                       const SizedBox(height: 12),
@@ -117,7 +130,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => context.push('/attendance-live'),
+                              onTap: () => context.push('/attendance-history?filter=Today'),
                               child: KpiCard(label: 'Checked In Today', value: data['checked_in_today'].toString(), icon: Icons.login_rounded, iconColor: AppColors.success),
                             )
                           ),
@@ -128,7 +141,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => context.push('/attendance-history'),
+                              onTap: () => context.push('/attendance-history?filter=Completed%20Today'),
                               child: KpiCard(label: 'Completed Shifts', value: data['checked_out_today'].toString(), icon: Icons.logout_rounded, iconColor: AppColors.surfaceVariant),
                             )
                           ),

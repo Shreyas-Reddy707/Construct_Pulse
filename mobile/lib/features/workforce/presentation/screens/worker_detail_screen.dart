@@ -10,7 +10,7 @@ import '../../../attendance/presentation/providers/attendance_providers.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/constants/enums.dart';
 import 'package:intl/intl.dart';
-import '../providers/pending_workers_provider.dart';
+import '../providers/worker_action_provider.dart';
 
 class WorkerDetailScreen extends ConsumerWidget {
   final String userId;

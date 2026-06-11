@@ -12,7 +12,7 @@ oauth2_scheme = OAuth2PasswordBearer(
     tokenUrl=f"{settings.API_V1_STR}/auth/login"
 )
 
-def get_current_user(
+def get_current_user_allow_pending(
     db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)
 ) -> User:
     try:
@@ -28,6 +28,13 @@ def get_current_user(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+def get_current_user(
+    user: User = Depends(get_current_user_allow_pending)
+) -> User:
+    if user.status == WorkerStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Pending approval")
     if user.status != WorkerStatus.APPROVED:
         raise HTTPException(status_code=400, detail="Inactive user")
     return user

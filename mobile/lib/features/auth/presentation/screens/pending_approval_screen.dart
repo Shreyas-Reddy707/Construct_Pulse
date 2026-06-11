@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_typography.dart';
+import '../providers/auth_provider.dart';
 
 /// Pending Approval Screen (Spec §70 Screen 5)
-class PendingApprovalScreen extends StatelessWidget {
+class PendingApprovalScreen extends ConsumerWidget {
   const PendingApprovalScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -44,6 +46,29 @@ class PendingApprovalScreen extends StatelessWidget {
                   const SizedBox(height: 12),
                   _infoRow(Icons.lock_clock_outlined, 'Access pending approval', AppColors.textTertiary),
                 ]),
+              ),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    ref.read(authProvider.notifier).checkApprovalStatus();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Checking status...')),
+                    );
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Check Status'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton(
+                onPressed: () => ref.read(authProvider.notifier).logout(),
+                child: const Text('Sign Out'),
               ),
             ],
           ),

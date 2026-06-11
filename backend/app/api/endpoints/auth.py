@@ -47,6 +47,15 @@ def login(login_data: schemas.FirebaseLogin, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="User not registered")
     
+    if user.status == WorkerStatus.PENDING:
+        raise HTTPException(status_code=403, detail="Your account is awaiting company approval.")
+    elif user.status == WorkerStatus.REJECTED:
+        raise HTTPException(status_code=403, detail="Your account has been rejected.")
+    elif user.status == WorkerStatus.SUSPENDED:
+        raise HTTPException(status_code=403, detail="Your account has been suspended. Contact your administrator.")
+    elif user.status != WorkerStatus.APPROVED:
+        raise HTTPException(status_code=403, detail="Your account is not approved.")
+    
     access_token = create_access_token(user.id)
     return {"access_token": access_token, "token_type": "bearer"}
 
@@ -78,8 +87,8 @@ def register_worker(request: RegisterWorkerRequest, db: Session = Depends(get_db
         company_id=request.company_id,
         department_id=request.department_id,
         contractor_id=request.contractor_id,
-        is_active=True if DEMO_AUTH else False,
-        status=WorkerStatus.APPROVED if DEMO_AUTH else WorkerStatus.PENDING
+        is_active=False,
+        status=WorkerStatus.PENDING
     )
     db.add(new_user)
     db.commit()

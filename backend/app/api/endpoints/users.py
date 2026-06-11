@@ -4,7 +4,7 @@ from typing import List
 from app.db.database import get_db
 from app.schemas import schemas
 from app.models.models import User
-from app.api.deps import get_current_user, RoleChecker
+from app.api.deps import get_current_user, get_current_user_allow_pending, RoleChecker
 from app.models.models import UserRole, WorkerStatus
 import logging
 
@@ -30,19 +30,9 @@ def read_users(
 
 
 @router.get("/me", response_model=schemas.UserResponse)
-def read_user_me(current_user: User = Depends(get_current_user)):
+def read_user_me(current_user: User = Depends(get_current_user_allow_pending)):
     return current_user
 
-@router.get("/pending", response_model=List[schemas.UserResponse])
-def get_pending_users(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))
-):
-    query = db.query(User).filter(User.status == WorkerStatus.PENDING)
-    if current_user.company_id:
-        query = query.filter(User.company_id == current_user.company_id)
-    users = query.all()
-    return users
 
 @router.get("/{user_id}", response_model=schemas.UserResponse)
 def read_user(
