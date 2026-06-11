@@ -112,6 +112,3 @@ Required variables:
 - Automated Payroll Integration
 - Geofenced Check-ins
 - Offline Mode with Sync
-
-## Contributors
-- ConstructPulse Development Team
