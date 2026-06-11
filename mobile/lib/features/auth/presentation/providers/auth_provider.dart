@@ -14,6 +14,7 @@ enum AuthStatus {
   otpVerified,
   authenticated,
   pendingApproval,
+  rejected,
   registering,
   unauthenticated,
   error,
@@ -80,6 +81,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
         if (user.isPending) {
           state = state.copyWith(
             status: AuthStatus.pendingApproval,
+            user: user,
+          );
+        } else if (user.isRejected) {
+          state = state.copyWith(
+            status: AuthStatus.rejected,
             user: user,
           );
         } else {
@@ -235,6 +241,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
               status: AuthStatus.pendingApproval,
               user: user,
             );
+          } else if (user.isRejected) {
+            state = state.copyWith(
+              status: AuthStatus.rejected,
+              user: user,
+            );
           } else {
             state = state.copyWith(
               status: AuthStatus.authenticated,
@@ -263,6 +274,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
       if (user.isApproved) {
         state = state.copyWith(
           status: AuthStatus.authenticated,
+          user: user,
+        );
+      } else if (user.isRejected) {
+        state = state.copyWith(
+          status: AuthStatus.rejected,
           user: user,
         );
       }

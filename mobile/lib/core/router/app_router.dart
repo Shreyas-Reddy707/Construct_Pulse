@@ -8,6 +8,7 @@ import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/otp_verification_screen.dart';
 import '../../features/auth/presentation/screens/registration_screen.dart';
 import '../../features/auth/presentation/screens/pending_approval_screen.dart';
+import '../../features/auth/presentation/screens/rejected_screen.dart';
 import '../../features/attendance/presentation/screens/qr_scan_screen.dart';
 import '../../features/emergency/presentation/screens/emergency_muster_screen.dart';
 import '../../features/workforce/presentation/screens/worker_detail_screen.dart';
@@ -50,6 +51,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/auth/otp', builder: (_, __) => const OtpVerificationScreen()),
       GoRoute(path: '/auth/register', builder: (_, __) => const RegistrationScreen()),
       GoRoute(path: '/auth/pending', builder: (_, __) => const PendingApprovalScreen()),
+      GoRoute(path: '/auth/rejected', builder: (_, __) => const RejectedScreen()),
       // Main app
       GoRoute(path: '/', builder: (_, __) => const AppShell()),
       GoRoute(path: '/scan', builder: (_, __) => const QrScanScreen()),

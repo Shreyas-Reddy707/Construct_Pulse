@@ -9,6 +9,7 @@ import '../../../../core/theme/app_typography.dart';
 import '../../../../core/widgets/kpi_card.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../attendance/presentation/providers/attendance_providers.dart';
+import '../../../workforce/presentation/providers/worker_providers.dart';
 
 final adminDashboardSummaryProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   final dio = ref.read(dioProvider);
@@ -72,14 +73,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => context.push('/workforce'),
+                              onTap: () {
+                                ref.invalidate(workersListProvider(null));
+                                context.push('/workforce');
+                              },
                               child: KpiCard(label: 'Total Workers', value: data['total_workers'].toString(), icon: Icons.people_rounded, iconColor: AppColors.primary),
                             )
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => context.push('/workforce?status=pending'),
+                              onTap: () {
+                                ref.invalidate(workersListProvider('pending'));
+                                context.push('/workforce?status=pending');
+                              },
                               child: KpiCard(label: 'Pending', value: data['pending_workers'].toString(), icon: Icons.pending_actions_rounded, iconColor: AppColors.warning),
                             )
                           ),
@@ -90,14 +97,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => context.push('/workforce?status=approved'),
+                              onTap: () {
+                                ref.invalidate(workersListProvider('approved'));
+                                context.push('/workforce?status=approved');
+                              },
                               child: KpiCard(label: 'Approved', value: data['approved_workers'].toString(), icon: Icons.check_circle_rounded, iconColor: AppColors.success),
                             )
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => context.push('/workforce?status=suspended'),
+                              onTap: () {
+                                ref.invalidate(workersListProvider('suspended'));
+                                context.push('/workforce?status=suspended');
+                              },
                               child: KpiCard(label: 'Suspended', value: data['suspended_workers'].toString(), icon: Icons.block_rounded, iconColor: AppColors.danger),
                             )
                           ),
@@ -108,7 +121,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                         children: [
                           Expanded(
                             child: GestureDetector(
-                              onTap: () => context.push('/workforce?status=rejected'),
+                              onTap: () {
+                                ref.invalidate(workersListProvider('rejected'));
+                                context.push('/workforce?status=rejected');
+                              },
                               child: KpiCard(label: 'Rejected', value: data['rejected_workers'].toString(), icon: Icons.cancel_rounded, iconColor: AppColors.textTertiary),
                             )
                           ),

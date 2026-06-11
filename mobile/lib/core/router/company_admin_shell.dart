@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_typography.dart';
 import '../constants/app_constants.dart';
 import '../../features/dashboard/presentation/screens/admin_dashboard_screen.dart';
 import '../../features/sites/presentation/screens/sites_list_screen.dart';
 import '../../features/workforce/presentation/screens/workforce_directory_screen.dart';
+import '../../features/workforce/presentation/providers/worker_providers.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 
-class CompanyAdminShell extends StatefulWidget {
+class CompanyAdminShell extends ConsumerStatefulWidget {
   const CompanyAdminShell({super.key});
 
   @override
-  State<CompanyAdminShell> createState() => _CompanyAdminShellState();
+  ConsumerState<CompanyAdminShell> createState() => _CompanyAdminShellState();
 }
 
-class _CompanyAdminShellState extends State<CompanyAdminShell> {
+class _CompanyAdminShellState extends ConsumerState<CompanyAdminShell> {
   int _currentIndex = 0;
 
   final _screens = const [
@@ -65,7 +67,11 @@ class _CompanyAdminShellState extends State<CompanyAdminShell> {
   Widget _navItem(int index, IconData activeIcon, IconData icon, String label) {
     final isActive = _currentIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
+      onTap: () {
+        if (index == 2) ref.invalidate(workersListProvider(null));
+        if (index == 3) ref.invalidate(workersListProvider('pending'));
+        setState(() => _currentIndex = index);
+      },
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
         width: 64,
