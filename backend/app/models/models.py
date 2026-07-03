@@ -142,6 +142,10 @@ class User(SoftDeleteMixin, Base):
     contractor_id = Column(String, ForeignKey("contractors.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     status = Column(Enum(WorkerStatus), default=WorkerStatus.PENDING)
+    designation = Column(String, nullable=True)
+    emergency_contact_name = Column(String, nullable=True)
+    emergency_contact_phone = Column(String, nullable=True)
+    emergency_contact_relationship = Column(String, nullable=True)
 
 class Session(Base):
     __tablename__ = "sessions"
@@ -159,9 +163,6 @@ class Session(Base):
     expires_at = Column(DateTime(timezone=True))
 
     user = relationship("User")
-    emergency_contact_name = Column(String, nullable=True)
-    emergency_contact_phone = Column(String, nullable=True)
-    emergency_contact_relationship = Column(String, nullable=True)
 
     company = relationship("Company", back_populates="users")
     department = relationship("Department", back_populates="users")

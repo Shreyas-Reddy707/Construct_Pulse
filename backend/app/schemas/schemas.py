@@ -40,6 +40,14 @@ class UserResponse(UserBase):
     class Config:
         from_attributes = True
 
+class ReadinessRequirement(BaseModel):
+    code: str
+    message: str
+
+class WorkerReadinessResponse(BaseModel):
+    ready: bool
+    missing: List[ReadinessRequirement]
+
 class CompanyBase(BaseModel):
     company_name: str
     registration_number: Optional[str] = None

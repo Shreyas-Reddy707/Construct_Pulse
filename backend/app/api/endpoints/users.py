@@ -50,6 +50,23 @@ def read_user(
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
+from app.services.worker_readiness_service import WorkerReadinessService
+
+@router.get("/{user_id}/readiness", response_model=schemas.WorkerReadinessResponse)
+def get_worker_readiness(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SYSTEM_ADMIN, UserRole.SITE_MANAGER]))
+):
+    query = db.query(User).filter(User.id == user_id)
+    if current_user.company_id and current_user.role != UserRole.SYSTEM_ADMIN:
+        query = query.filter(User.company_id == current_user.company_id)
+    user = query.first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    return WorkerReadinessService.evaluate_worker_readiness(user)
+
 @router.get("/{user_id}/sites", response_model=List[schemas.SiteResponse])
 def get_user_sites(
     user_id: str,
@@ -79,6 +96,22 @@ def _update_worker_status(user_id: str, status: WorkerStatus, is_active: bool, d
         
     if status == WorkerStatus.SUSPENDED and user.role in [UserRole.COMPANY_ADMIN, UserRole.SYSTEM_ADMIN]:
         raise HTTPException(status_code=400, detail="Admin users cannot be suspended")
+
+    if status == WorkerStatus.APPROVED and user.status == WorkerStatus.PENDING:
+        missing_fields = []
+        if not user.emergency_contact_name:
+            missing_fields.append("emergency contact name")
+        if not user.emergency_contact_phone:
+            missing_fields.append("emergency contact phone")
+        if not user.designation:
+            missing_fields.append("designation")
+            
+        if missing_fields:
+            missing_str = ", ".join(missing_fields)
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Worker missing required fields for approval: {missing_str}."
+            )
 
     # If suspending, auto-checkout any active attendance sessions
     if status == WorkerStatus.SUSPENDED:

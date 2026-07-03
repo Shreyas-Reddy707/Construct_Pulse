@@ -87,6 +87,16 @@ def assign_worker(site_id: str, assignment: schemas.SiteAssignment, db: Session 
     if not site or not user:
         raise HTTPException(status_code=404, detail="Site or User not found")
         
+    if getattr(user, "is_deleted", False):
+        raise HTTPException(status_code=400, detail="Archived workers cannot be assigned")
+        
+    from app.models.models import WorkerStatus
+    if user.status == WorkerStatus.SUSPENDED:
+        raise HTTPException(status_code=400, detail="Suspended workers cannot be assigned")
+        
+    if site.status != "active":
+        raise HTTPException(status_code=400, detail="Cannot assign worker to an inactive site")
+        
     if user.role != UserRole.WORKER:
         raise HTTPException(status_code=400, detail="Only Worker accounts may be assigned to sites")
     site.assigned_workers.append(user)

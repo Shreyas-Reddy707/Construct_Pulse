@@ -109,7 +109,10 @@ def register_worker(request: RegisterWorkerRequest, db: Session = Depends(get_db
         department_id=request.department_id,
         contractor_id=request.contractor_id,
         is_active=False,
-        status=WorkerStatus.PENDING
+        status=WorkerStatus.PENDING,
+        designation=request.designation,
+        emergency_contact_name=request.emergency_contact_name,
+        emergency_contact_phone=request.emergency_contact_phone
     )
     db.add(new_user)
     db.commit()
