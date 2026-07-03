@@ -11,6 +11,12 @@ class WorkerStatus(str, enum.Enum):
     REJECTED = "rejected"
     SUSPENDED = "suspended"
 
+class VerificationStatus(str, enum.Enum):
+    PENDING = "pending"
+    VERIFIED = "verified"
+    REJECTED = "rejected"
+    EXPIRED = "expired"
+
 class UserRole(str, enum.Enum):
     WORKER = "Worker"
     SUPERVISOR = "Supervisor"
@@ -276,3 +282,36 @@ class WorkerInductionRecord(Base):
     
     worker = relationship("User", backref="induction_records")
     package = relationship("InductionPackage")
+
+class QualificationType(SoftDeleteMixin, Base):
+    __tablename__ = "qualification_types"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id = Column(String, ForeignKey("companies.id"), nullable=True)
+    name = Column(String, nullable=False)
+    description = Column(String)
+
+class QualificationRequirement(Base):
+    __tablename__ = "qualification_requirements"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id = Column(String, ForeignKey("companies.id"), nullable=False)
+    designation = Column(String, nullable=False, index=True)
+    qualification_type_id = Column(String, ForeignKey("qualification_types.id"), nullable=False)
+
+    qualification_type = relationship("QualificationType")
+
+class WorkerQualification(SoftDeleteMixin, Base):
+    __tablename__ = "worker_qualifications"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    worker_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    qualification_type_id = Column(String, ForeignKey("qualification_types.id"), nullable=False)
+    certificate_number = Column(String)
+    issuing_authority = Column(String)
+    issue_date = Column(DateTime(timezone=True))
+    expiry_date = Column(DateTime(timezone=True), nullable=False)
+    verification_status = Column(Enum(VerificationStatus), default=VerificationStatus.PENDING)
+    document_url = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    worker = relationship("User", backref="qualifications")
+    qualification_type = relationship("QualificationType")

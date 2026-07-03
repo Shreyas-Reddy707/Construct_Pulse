@@ -115,5 +115,40 @@ class WorkerReadinessService:
 
     @classmethod
     def _check_compliance(cls, worker: User) -> List[Dict[str, str]]:
-        # Returns PASS for now (Batch 1B Constraint)
-        return []
+        missing = []
+        if not worker.company_id or not worker.designation:
+            return missing
+        
+        session = Session.object_session(worker)
+        if not session:
+            return missing
+            
+        from app.models.models import QualificationRequirement, VerificationStatus
+        from datetime import datetime, timezone
+        
+        requirements = session.query(QualificationRequirement).filter(
+            QualificationRequirement.company_id == worker.company_id,
+            QualificationRequirement.designation == worker.designation
+        ).all()
+        
+        now_utc = datetime.now(timezone.utc)
+        
+        for req in requirements:
+            has_valid = False
+            for qual in worker.qualifications:
+                if qual.qualification_type_id == req.qualification_type_id and not qual.is_deleted:
+                    # check if aware of offset-naive expiry_date by ensuring comparison is safe
+                    if qual.verification_status == VerificationStatus.VERIFIED:
+                        # Assuming expiry_date is timezone aware, if not we might need to handle it.
+                        if qual.expiry_date and qual.expiry_date > now_utc:
+                            has_valid = True
+                            break
+            
+            if not has_valid:
+                req_name = req.qualification_type.name if req.qualification_type else "Required Qualification"
+                missing.append({
+                    "code": "COMPLIANCE_MISSING_QUALIFICATION",
+                    "message": f"Worker is missing a valid, verified, non-expired qualification '{req_name}' required for designation '{worker.designation}'."
+                })
+                
+        return missing

@@ -185,3 +185,49 @@ class SiteOccupancyResponse(BaseModel):
     site_name: str
     workers_on_site: int
 
+# --- Qualification Schemas ---
+class QualificationTypeBase(BaseModel):
+    name: str
+    description: Optional[str] = None
+    company_id: Optional[str] = None
+
+class QualificationTypeCreate(QualificationTypeBase):
+    pass
+
+class QualificationTypeResponse(QualificationTypeBase):
+    id: str
+
+    class Config:
+        from_attributes = True
+
+class WorkerQualificationBase(BaseModel):
+    qualification_type_id: str
+    certificate_number: Optional[str] = None
+    issuing_authority: Optional[str] = None
+    issue_date: Optional[datetime] = None
+    expiry_date: datetime
+    document_url: Optional[str] = None
+
+class WorkerQualificationCreate(WorkerQualificationBase):
+    pass
+
+class WorkerQualificationUpdate(BaseModel):
+    verification_status: str
+
+class WorkerQualificationResponse(WorkerQualificationBase):
+    id: str
+    worker_id: str
+    verification_status: str
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    qualification_type: Optional[QualificationTypeResponse] = None
+
+    class Config:
+        from_attributes = True
+
+class CompliancePassportResponse(BaseModel):
+    worker_id: str
+    ready: bool
+    missing_requirements: List[ReadinessRequirement]
+    qualifications: List[WorkerQualificationResponse]
+
