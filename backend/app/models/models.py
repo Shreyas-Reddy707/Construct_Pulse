@@ -250,3 +250,29 @@ class OccupancySnapshot(Base):
     contractor_breakdown = Column(JSON, default=dict)
 
     site = relationship("Site")
+    
+class InductionPackage(SoftDeleteMixin, Base):
+    __tablename__ = "induction_packages"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    site_id = Column(String, ForeignKey("sites.id"), nullable=False)
+    version = Column(Integer, default=1, nullable=False)
+    title = Column(String, nullable=False)
+    is_active = Column(Boolean, default=True, nullable=False)
+    expiry_days = Column(Integer, default=365, nullable=False)
+    quiz_enabled = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    site = relationship("Site", backref="induction_packages")
+
+class WorkerInductionRecord(Base):
+    __tablename__ = "worker_induction_records"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    worker_id = Column(String, ForeignKey("users.id"), nullable=False)
+    package_id = Column(String, ForeignKey("induction_packages.id"), nullable=False)
+    completed_at = Column(DateTime(timezone=True), server_default=func.now())
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    worker_acknowledgement = Column(Boolean, default=False, nullable=False)
+    package_version_completed = Column(Integer, nullable=False)
+    
+    worker = relationship("User", backref="induction_records")
+    package = relationship("InductionPackage")

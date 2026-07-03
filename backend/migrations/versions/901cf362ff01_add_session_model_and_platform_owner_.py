@@ -39,29 +39,11 @@ def upgrade() -> None:
     )
 
     # Seed Platform Owner
-    from sqlalchemy.sql import table, column
-    users_table = table('users',
-        column('id', sa.String),
-        column('phone_number', sa.String),
-        column('firebase_uid', sa.String),
-        column('name', sa.String),
-        column('role', sa.String),
-        column('is_active', sa.Boolean),
-        column('status', sa.String),
-        column('is_deleted', sa.Boolean)
+    op.execute(
+        "INSERT INTO users (id, phone_number, firebase_uid, name, role, is_active, status, is_deleted) "
+        "VALUES ('00000000-0000-0000-0000-000000000000', '+10000000000', 'firebase_platform_owner', 'Platform Owner', 'SYSTEM_ADMIN'::userrole, true, 'APPROVED'::workerstatus, false) "
+        "ON CONFLICT (id) DO NOTHING"
     )
-    op.bulk_insert(users_table, [
-        {
-            'id': '00000000-0000-0000-0000-000000000000',
-            'phone_number': '+10000000000',
-            'firebase_uid': 'firebase_platform_owner',
-            'name': 'Platform Owner',
-            'role': 'System Admin',
-            'is_active': True,
-            'status': 'approved',
-            'is_deleted': False
-        }
-    ])
 
 
 def downgrade() -> None:

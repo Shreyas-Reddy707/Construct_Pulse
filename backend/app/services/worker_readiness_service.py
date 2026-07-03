@@ -89,8 +89,29 @@ class WorkerReadinessService:
 
     @classmethod
     def _check_safety(cls, worker: User) -> List[Dict[str, str]]:
-        # Returns PASS for now (Batch 1B Constraint)
-        return []
+        missing = []
+        active_sites = [site for site in worker.assigned_sites if site.status == "active"]
+        
+        from datetime import datetime, timezone
+        now_utc = datetime.now(timezone.utc)
+
+        # Worker must have a valid induction for EVERY active site assignment.
+        # This ensures that when assigned to a new site, readiness is blocked until inducted.
+        for site in active_sites:
+            has_valid_induction_for_site = False
+            for record in worker.induction_records:
+                if record.package and record.package.is_active and str(record.package.site_id) == str(site.id):
+                    if record.worker_acknowledgement and record.expires_at > now_utc:
+                        has_valid_induction_for_site = True
+                        break
+            
+            if not has_valid_induction_for_site:
+                missing.append({
+                    "code": "SAFETY_MISSING_INDUCTION",
+                    "message": f"Worker must possess a valid, non-expired safety induction for the active assigned site (ID: {site.id})."
+                })
+            
+        return missing
 
     @classmethod
     def _check_compliance(cls, worker: User) -> List[Dict[str, str]]:

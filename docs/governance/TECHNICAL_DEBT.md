@@ -222,4 +222,31 @@ When resolving technical debt:
 
 ---
 
+# TD-006
 
+## Title
+
+Pending Safety Foundation Migration
+
+### Status
+
+Open
+
+### Priority
+
+High
+
+### Description
+
+Safety Foundation models are implemented.
+Migration generation is blocked by unresolved PostgreSQL ENUM migration issues from previous batches.
+
+### Resolution
+
+Generate and execute the migration immediately after the migration chain is repaired.
+
+### Impact
+
+Safety Foundation cannot be deployed until migration exists.
+
+---
