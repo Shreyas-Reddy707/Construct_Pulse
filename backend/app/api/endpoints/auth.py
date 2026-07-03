@@ -56,7 +56,28 @@ def login(login_data: schemas.FirebaseLogin, db: Session = Depends(get_db)):
     elif user.status != WorkerStatus.APPROVED:
         raise HTTPException(status_code=403, detail="Your account is not approved.")
     
-    access_token = create_access_token(user.id)
+    import uuid
+    from datetime import datetime
+    from app.models.models import Session as AuthSession
+    
+    session_id = str(uuid.uuid4())
+    new_session = AuthSession(
+        id=session_id,
+        user_id=user.id,
+        login_time=datetime.utcnow(),
+        last_activity=datetime.utcnow()
+    )
+    db.add(new_session)
+    db.commit()
+
+    claims = {
+        "company_id": user.company_id,
+        "role_id": user.role.value if user.role else UserRole.WORKER.value,
+        "permission_version": "1.0",
+        "session_id": session_id
+    }
+    
+    access_token = create_access_token(user.id, claims=claims)
     return {"access_token": access_token, "token_type": "bearer"}
 
 class RegisterWorkerRequest(BaseModel):
@@ -94,7 +115,28 @@ def register_worker(request: RegisterWorkerRequest, db: Session = Depends(get_db
     db.commit()
     db.refresh(new_user)
     
-    access_token = create_access_token(new_user.id)
+    import uuid
+    from datetime import datetime
+    from app.models.models import Session as AuthSession
+    
+    session_id = str(uuid.uuid4())
+    new_session = AuthSession(
+        id=session_id,
+        user_id=new_user.id,
+        login_time=datetime.utcnow(),
+        last_activity=datetime.utcnow()
+    )
+    db.add(new_session)
+    db.commit()
+
+    claims = {
+        "company_id": new_user.company_id,
+        "role_id": new_user.role.value if new_user.role else UserRole.WORKER.value,
+        "permission_version": "1.0",
+        "session_id": session_id
+    }
+    
+    access_token = create_access_token(new_user.id, claims=claims)
     return {
         "user_id": str(new_user.id),
         "status": "success",

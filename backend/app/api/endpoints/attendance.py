@@ -9,7 +9,7 @@ import io
 from app.db.database import get_db
 from app.schemas import schemas
 from app.models.models import Site, User, Attendance, SiteQRCode, AttendanceStatus, UserRole
-from app.api.deps import get_current_user, RoleChecker
+from app.api.deps import get_current_user, RoleChecker, PermissionChecker
 
 router = APIRouter()
 
@@ -147,13 +147,13 @@ def get_worker_attendance(worker_id: str, db: Session = Depends(get_db), current
     return query.all()
 
 @router.get("/site/{site_id}", response_model=List[schemas.AttendanceResponse])
-def get_site_attendance(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR, UserRole.SYSTEM_ADMIN]))):
+def get_site_attendance(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("attendance.view"))):
     query = db.query(Attendance).filter(Attendance.site_id == site_id)
     if current_user.company_id:
         query = query.filter(Attendance.company_id == current_user.company_id)
     return query.all()
 @router.get("/live", response_model=List[schemas.AttendanceResponse])
-def get_live_attendance(db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR, UserRole.SYSTEM_ADMIN]))):
+def get_live_attendance(db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("attendance.view"))):
     query = db.query(Attendance).join(User).filter(
         Attendance.check_out_time.is_(None)
     )
@@ -183,7 +183,7 @@ def get_live_attendance(db: Session = Depends(get_db), current_user: User = Depe
     return attendances
 
 @router.get("/occupancy", response_model=List[schemas.SiteOccupancyResponse])
-def get_occupancy(db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR, UserRole.SYSTEM_ADMIN]))):
+def get_occupancy(db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("attendance.view"))):
     sites_query = db.query(Site)
     if current_user.company_id:
         sites_query = sites_query.filter(Site.company_id == current_user.company_id)
@@ -199,7 +199,7 @@ def get_occupancy(db: Session = Depends(get_db), current_user: User = Depends(Ro
     return results
 
 @router.get("/history", response_model=List[schemas.AttendanceResponse])
-def get_company_attendance_history(db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR, UserRole.SYSTEM_ADMIN]))):
+def get_company_attendance_history(db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("attendance.view"))):
     query = db.query(Attendance)
     if current_user.company_id:
         query = query.filter(Attendance.company_id == current_user.company_id)

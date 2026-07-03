@@ -18,12 +18,22 @@ class UserRole(str, enum.Enum):
     COMPANY_ADMIN = "Company Admin"
     MUNICIPALITY_OFFICER = "Municipality Officer"
     SYSTEM_ADMIN = "System Admin"
+    COMPANY_DIRECTOR = "Company Director"
+    OPERATIONS_MANAGER = "Operations Manager"
+    PROJECT_MANAGER = "Project Manager"
+    SITE_MANAGER = "Site Manager"
+    SAFETY_OFFICER = "Safety Officer"
+    VISITOR = "Visitor"
 
 class AttendanceStatus(str, enum.Enum):
     CHECKED_IN = "checked_in"
     CHECKED_OUT = "checked_out"
     ABSENT = "absent"
     LEAVE = "leave"
+
+class SoftDeleteMixin:
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    deleted_at = Column(DateTime(timezone=True), nullable=True)
 
 worker_to_site = Table(
     'worker_to_site', Base.metadata,
@@ -43,7 +53,45 @@ contractor_to_site = Table(
     Column('site_id', String, ForeignKey('sites.id'))
 )
 
-class Company(Base):
+role_permission_group = Table(
+    'role_permission_group', Base.metadata,
+    Column('role_id', String, ForeignKey('roles.id', ondelete="CASCADE"), primary_key=True),
+    Column('permission_group_id', String, ForeignKey('permission_groups.id', ondelete="CASCADE"), primary_key=True)
+)
+
+permission_group_permission = Table(
+    'permission_group_permission', Base.metadata,
+    Column('permission_group_id', String, ForeignKey('permission_groups.id', ondelete="CASCADE"), primary_key=True),
+    Column('permission_id', String, ForeignKey('permissions.id', ondelete="CASCADE"), primary_key=True)
+)
+
+class Role(Base):
+    __tablename__ = "roles"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String, unique=True, index=True, nullable=False)
+    description = Column(String)
+
+    permission_groups = relationship("PermissionGroup", secondary=role_permission_group, back_populates="roles")
+
+class PermissionGroup(Base):
+    __tablename__ = "permission_groups"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String, unique=True, index=True, nullable=False)
+    description = Column(String)
+
+    roles = relationship("Role", secondary=role_permission_group, back_populates="permission_groups")
+    permissions = relationship("Permission", secondary=permission_group_permission, back_populates="groups")
+
+class Permission(Base):
+    __tablename__ = "permissions"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    name = Column(String, unique=True, index=True, nullable=False)
+    description = Column(String)
+
+    groups = relationship("PermissionGroup", secondary=permission_group_permission, back_populates="permissions")
+
+
+class Company(SoftDeleteMixin, Base):
     __tablename__ = "companies"
     __table_args__ = (UniqueConstraint('company_name', name='uq_company_name'),)
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -58,7 +106,7 @@ class Company(Base):
     users = relationship("User", back_populates="company")
     sites = relationship("Site", back_populates="company")
 
-class Department(Base):
+class Department(SoftDeleteMixin, Base):
     __tablename__ = "departments"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     company_id = Column(String, ForeignKey("companies.id"))
@@ -69,7 +117,7 @@ class Department(Base):
     users = relationship("User", back_populates="department")
     sites = relationship("Site", secondary=department_to_site, back_populates="assigned_departments")
 
-class Contractor(Base):
+class Contractor(SoftDeleteMixin, Base):
     __tablename__ = "contractors"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     company_id = Column(String, ForeignKey("companies.id"))
@@ -81,7 +129,7 @@ class Contractor(Base):
     users = relationship("User", back_populates="contractor")
     sites = relationship("Site", secondary=contractor_to_site, back_populates="assigned_contractors")
 
-class User(Base):
+class User(SoftDeleteMixin, Base):
     __tablename__ = "users"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     firebase_uid = Column(String, unique=True, index=True)
@@ -94,6 +142,23 @@ class User(Base):
     contractor_id = Column(String, ForeignKey("contractors.id"), nullable=True)
     is_active = Column(Boolean, default=True)
     status = Column(Enum(WorkerStatus), default=WorkerStatus.PENDING)
+
+class Session(Base):
+    __tablename__ = "sessions"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    device_id = Column(String)
+    device_name = Column(String)
+    device_platform = Column(String)
+    app_version = Column(String)
+    login_time = Column(DateTime(timezone=True), default=func.now())
+    last_activity = Column(DateTime(timezone=True), default=func.now())
+    ip_address = Column(String)
+    push_token = Column(String)
+    is_revoked = Column(Boolean, default=False, nullable=False)
+    expires_at = Column(DateTime(timezone=True))
+
+    user = relationship("User")
     emergency_contact_name = Column(String, nullable=True)
     emergency_contact_phone = Column(String, nullable=True)
     emergency_contact_relationship = Column(String, nullable=True)
@@ -120,7 +185,7 @@ class User(Base):
     def assigned_site_names(self) -> str:
         return ", ".join([s.name for s in self.assigned_sites]) if self.assigned_sites else ""
 
-class Site(Base):
+class Site(SoftDeleteMixin, Base):
     __tablename__ = "sites"
     __table_args__ = (UniqueConstraint('company_id', 'name', name='uq_company_site_name'),)
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))

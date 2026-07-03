@@ -7,7 +7,7 @@ import math
 from app.db.database import get_db
 from app.schemas import schemas
 from app.models.models import Site, User, Department, Contractor, SiteQRCode, UserRole
-from app.api.deps import get_current_user, RoleChecker
+from app.api.deps import get_current_user, RoleChecker, PermissionChecker
 
 router = APIRouter()
 
@@ -21,7 +21,7 @@ def read_sites(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), c
     return query.offset(skip).limit(limit).all()
 
 @router.post("/", response_model=schemas.SiteResponse)
-def create_site(site_in: schemas.SiteCreate, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
+def create_site(site_in: schemas.SiteCreate, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("site.create"))):
     site_data = site_in.model_dump()
     if current_user.company_id:
         site_data["company_id"] = current_user.company_id

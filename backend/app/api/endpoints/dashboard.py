@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import cast, Date
 from app.db.database import get_db
 from app.models.models import User, Company, Site, WorkerStatus, Attendance, AttendanceStatus, UserRole
-from app.api.deps import get_current_user, RoleChecker
+from app.api.deps import get_current_user, RoleChecker, PermissionChecker
 from datetime import datetime, date, timedelta, timezone
 
 router = APIRouter()
@@ -11,7 +11,7 @@ router = APIRouter()
 @router.get("/summary")
 def get_dashboard_summary(
     db: Session = Depends(get_db),
-    current_user: User = Depends(RoleChecker(["Company Admin", "System Admin", "Site Manager"]))
+    current_user: User = Depends(PermissionChecker("reports.view"))
 ):
     company_id = current_user.company_id
     if current_user.role.value == "System Admin":

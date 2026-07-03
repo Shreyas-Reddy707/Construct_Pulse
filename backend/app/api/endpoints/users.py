@@ -12,17 +12,19 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+from app.api.deps import get_current_user, get_current_user_allow_pending, RoleChecker, get_current_tenant, PermissionChecker
+
 @router.get("/", response_model=List[schemas.UserResponse])
 def read_users(
     skip: int = 0, 
     limit: int = 100, 
     status: WorkerStatus = None,
     db: Session = Depends(get_db),
-    current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR]))
+    current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR])),
+    tenant = Depends(get_current_tenant)
 ):
     query = db.query(User).filter(User.role == UserRole.WORKER)
-    if current_user.company_id:
-        query = query.filter(User.company_id == current_user.company_id)
+    query = query.filter(User.company_id == tenant.id)
     if status:
         query = query.filter(User.status == status)
     users = query.offset(skip).limit(limit).all()
@@ -98,17 +100,17 @@ def _update_worker_status(user_id: str, status: WorkerStatus, is_active: bool, d
     return user
 
 @router.put("/{user_id}/approve", response_model=schemas.UserResponse)
-def approve_worker(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
+def approve_worker(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("worker.approve"))):
     return _update_worker_status(user_id, WorkerStatus.APPROVED, True, db, current_user)
 
 @router.put("/{user_id}/reject", response_model=schemas.UserResponse)
-def reject_worker(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
+def reject_worker(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("worker.reject"))):
     return _update_worker_status(user_id, WorkerStatus.REJECTED, False, db, current_user)
 
 @router.put("/{user_id}/suspend", response_model=schemas.UserResponse)
-def suspend_worker(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
+def suspend_worker(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("worker.suspend"))):
     return _update_worker_status(user_id, WorkerStatus.SUSPENDED, False, db, current_user)
 
 @router.put("/{user_id}/reactivate", response_model=schemas.UserResponse)
-def reactivate_worker(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
+def reactivate_worker(user_id: str, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("worker.reactivate"))):
     return _update_worker_status(user_id, WorkerStatus.APPROVED, True, db, current_user)
