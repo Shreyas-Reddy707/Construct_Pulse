@@ -91,8 +91,13 @@ class RegisterWorkerRequest(BaseModel):
     emergency_contact_name: Optional[str] = None
     emergency_contact_phone: Optional[str] = None
 
-@router.post("/register")
+@router.post("/register", deprecated=True)
 def register_worker(request: RegisterWorkerRequest, db: Session = Depends(get_db)):
+    """
+    [DEPRECATED] Legacy direct user creation endpoint.
+    New clients must use the Registration Intake workflow (POST /api/v1/register/request).
+    This endpoint remains for backwards compatibility only.
+    """
     full_name = f"{request.first_name} {request.last_name}"
     user = db.query(User).filter(User.phone_number == request.phone).first()
     if user:

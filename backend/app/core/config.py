@@ -35,6 +35,10 @@ class Settings(BaseSettings):
 
     # ── Feature flags ─────────────────────────────────────────────────────────
     DEMO_AUTH: bool = False
+    
+    # ── Secure Token Engine ───────────────────────────────────────────────────
+    SECURE_TOKEN_LIFETIME_SECONDS: int = int(os.getenv("SECURE_TOKEN_LIFETIME_SECONDS", "60"))
+    SECURE_TOKEN_GRACE_SECONDS: int = int(os.getenv("SECURE_TOKEN_GRACE_SECONDS", "5"))
 
     model_config = SettingsConfigDict(
         env_file=".env",

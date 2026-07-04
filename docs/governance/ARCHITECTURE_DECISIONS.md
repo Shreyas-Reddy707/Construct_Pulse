@@ -369,3 +369,91 @@ Architecture history must remain traceable.
 ---
 
 
+
+# ADR-013
+
+## Title
+
+Registration Intake Separation
+
+### Status
+
+Accepted
+
+### Decision
+
+RegistrationRequest is explicitly designated as an intake workflow entity and is strictly decoupled from the domain identity (User). The lifecycle is as follows:
+RegistrationRequest -> Manager Review (Batch 3E) -> Approved -> User Created -> Worker Readiness -> Access Verification.
+
+### Rationale
+
+Ensures that anyone can submit an application but prevents automatic identity creation or permission provisioning without managerial approval.
+
+### Consequences
+
+- Submitting a registration request grants no permissions, sites, or attendance.
+- All registrations remain pending and wait in a separate review queue.
+
+---
+
+# ADR-014
+
+## Title
+
+Read Models Own Aggregate State
+
+### Status
+
+Accepted
+
+### Decision
+
+Operational domains own operational state, while aggregate state belongs to dedicated read models.
+
+Examples:
+
+- Attendance owns attendance state.
+- Occupancy owns occupancy aggregates.
+- Reporting owns reporting projections.
+
+Read models may consume operational domains but must never mutate them.
+
+### Rationale
+
+Separating operational state from aggregate views eliminates duplicated business logic, improves scalability, and enables independent optimization of reporting and dashboard workloads.
+
+### Consequences
+
+- Attendance remains the source of truth for worker presence.
+- Occupancy becomes the single owner of live occupancy calculations.
+- Future dashboards and analytics consume read models instead of operational domains.
+
+---
+
+# ADR-015
+
+## Title
+
+Projection DTO Boundary
+
+### Status
+
+Accepted
+
+### Decision
+
+ORM entities must never cross the service boundary.
+
+Every API response must expose dedicated Projection DTOs rather than database entities.
+
+### Rationale
+
+Projection DTOs decouple database implementation from API contracts, improve security, reduce accidental data leakage, and allow internal schema evolution without breaking clients.
+
+### Consequences
+
+- Services map ORM models to Projection DTOs.
+- Controllers return Projection DTOs exclusively.
+- API contracts remain stable regardless of database changes.
+
+---

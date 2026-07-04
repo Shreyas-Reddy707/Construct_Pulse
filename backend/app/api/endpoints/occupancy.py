@@ -1,94 +1,92 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
-from datetime import datetime, timezone, timedelta
+from typing import List, Optional
 from app.db.database import get_db
 from app.schemas import schemas
-from app.models.models import Site, User, Attendance, AttendanceStatus, Department, Contractor
-from app.api.deps import get_current_user
+from app.models.models import User, UserRole, Site
+from app.api.deps import get_current_user, PermissionChecker
+from app.services.occupancy_service import OccupancyService
 
 router = APIRouter()
 
-def compute_occupancy(site_id: str, db: Session, company_id: str | None = None):
-    yesterday = datetime.now(timezone.utc) - timedelta(hours=24)
-    query = db.query(Attendance).filter(
-        Attendance.site_id == site_id,
-        Attendance.check_out_time.is_(None),
-        Attendance.check_in_time >= yesterday
-    )
-    if company_id:
-        query = query.filter(Attendance.company_id == company_id)
-    active_attendances = query.all()
-    
-    total = len(active_attendances)
-    dept_breakdown = {}
-    contractor_breakdown = {}
-    
-    for att in active_attendances:
-        user = att.user
+def _enforce_tenant_isolation(current_user: User, query: schemas.OccupancyQuery, db: Session) -> schemas.OccupancyQuery:
+    if current_user.role == UserRole.COMPANY_ADMIN:
+        # Currently the query object doesn't have company_id, 
+        # but we must ensure the requested site belongs to their company.
+        if query.site_id:
+            site = db.query(Site).filter(Site.id == query.site_id, Site.company_id == current_user.company_id).first()
+            if not site:
+                raise HTTPException(status_code=404, detail="Site not found")
+        else:
+            # We must lock the query to their company if they don't provide a site_id.
+            # But the OccupancyQuery only filters by site_id.
+            # Let's enforce that site_id is required for Company Admins for now.
+            raise HTTPException(status_code=400, detail="site_id is required")
+            
+    elif current_user.role == UserRole.SITE_MANAGER:
+        # Same logic for site managers for now
+        if not query.site_id:
+             raise HTTPException(status_code=400, detail="site_id is required")
+             
+        # Validate they have access to this site
+        valid_site = any(s.id == query.site_id for s in current_user.assigned_sites)
+        if not valid_site:
+             raise HTTPException(status_code=403, detail="Not assigned to this site")
+             
+    elif current_user.role == UserRole.WORKER:
+        raise HTTPException(status_code=403, detail="Workers cannot access occupancy data")
         
-        # Dept
-        dept_id = user.department_id
-        if dept_id:
-            dept = db.query(Department).filter(Department.id == dept_id).first()
-            if dept:
-                dept_breakdown[dept.name] = dept_breakdown.get(dept.name, 0) + 1
-                
-        # Contractor
-        cont_id = user.contractor_id
-        if cont_id:
-            cont = db.query(Contractor).filter(Contractor.id == cont_id).first()
-            if cont:
-                contractor_breakdown[cont.name] = contractor_breakdown.get(cont.name, 0) + 1
-                
-    return {
-        "total_workers": total,
-        "department_breakdown": dept_breakdown,
-        "contractor_breakdown": contractor_breakdown
-    }
+    return query
 
-@router.get("/current", response_model=List[schemas.OccupancyResponse])
-def get_current_occupancy(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    query = db.query(Site)
-    if current_user.company_id:
-        query = query.filter(Site.company_id == current_user.company_id)
-    sites = query.all()
+@router.post("/dashboard", response_model=schemas.OccupancyDashboard)
+def get_dashboard(
+    query: schemas.OccupancyQuery,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("attendance.view"))
+):
+    """
+    Returns an aggregated dashboard projection of current site occupancy.
+    """
+    query = _enforce_tenant_isolation(current_user, query, db)
+    return OccupancyService.get_dashboard(db, query)
+
+@router.post("/muster", response_model=List[schemas.OccupancyWorker])
+def get_muster_list(
+    query: schemas.OccupancyQuery,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("attendance.view"))
+):
+    """
+    Returns a paginated list of workers currently occupying a site.
+    """
+    query = _enforce_tenant_isolation(current_user, query, db)
+    return OccupancyService.get_muster_list(db, query)
+
+@router.post("/snapshots/{site_id}", response_model=schemas.OccupancySnapshotResponse)
+def capture_snapshot(
+    site_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("attendance.view"))
+):
+    """
+    Manually captures an occupancy snapshot for historical tracking.
+    """
+    query = schemas.OccupancyQuery(site_id=site_id)
+    _enforce_tenant_isolation(current_user, query, db)
+    return OccupancyService.capture_snapshot(db, site_id, captured_by=current_user.id)
+
+@router.get("/snapshots/{site_id}", response_model=List[schemas.OccupancySnapshotResponse])
+def list_snapshots(
+    site_id: str,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, le=1000),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("attendance.view"))
+):
+    """
+    Lists historical occupancy snapshots for a site.
+    """
+    query = schemas.OccupancyQuery(site_id=site_id)
+    _enforce_tenant_isolation(current_user, query, db)
     
-    results = []
-    for site in sites:
-        occ = compute_occupancy(site.id, db, current_user.company_id)
-        results.append(occ)
-    return results
-
-@router.get("/site/{site_id}", response_model=schemas.OccupancyResponse)
-def get_site_occupancy(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    query = db.query(Site).filter(Site.id == site_id)
-    if current_user.company_id:
-        query = query.filter(Site.company_id == current_user.company_id)
-    site = query.first()
-    
-    if not site:
-        raise HTTPException(status_code=404, detail="Site not found")
-    return compute_occupancy(site_id, db, current_user.company_id)
-
-@router.get("/departments/{site_id}")
-def get_departments_occupancy(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    query = db.query(Site).filter(Site.id == site_id)
-    if current_user.company_id:
-        query = query.filter(Site.company_id == current_user.company_id)
-    if not query.first():
-        raise HTTPException(status_code=404, detail="Site not found")
-        
-    occ = compute_occupancy(site_id, db, current_user.company_id)
-    return occ["department_breakdown"]
-
-@router.get("/contractors/{site_id}")
-def get_contractors_occupancy(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    query = db.query(Site).filter(Site.id == site_id)
-    if current_user.company_id:
-        query = query.filter(Site.company_id == current_user.company_id)
-    if not query.first():
-        raise HTTPException(status_code=404, detail="Site not found")
-        
-    occ = compute_occupancy(site_id, db, current_user.company_id)
-    return occ["contractor_breakdown"]
+    return OccupancyService.list_snapshots(db, site_id, skip, limit)

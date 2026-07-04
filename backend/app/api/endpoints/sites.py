@@ -8,6 +8,8 @@ from app.db.database import get_db
 from app.schemas import schemas
 from app.models.models import Site, User, Department, Contractor, SiteQRCode, UserRole
 from app.api.deps import get_current_user, RoleChecker, PermissionChecker
+from app.services.site_readiness_service import SiteReadinessService
+from app.models.models import SiteStatus
 
 router = APIRouter()
 
@@ -56,6 +58,7 @@ def update_site(site_id: str, site_in: schemas.SiteUpdate, db: Session = Depends
     
     db.commit()
     db.refresh(site)
+    SiteReadinessService.update_lifecycle_state(site, db)
     return site
 
 @router.delete("/{site_id}")
@@ -66,9 +69,54 @@ def delete_site(site_id: str, db: Session = Depends(get_db), current_user: User 
     site = query.first()
     if not site:
         raise HTTPException(status_code=404, detail="Site not found")
-    db.delete(site)
+    site.is_deleted = True
+    site.deleted_at = datetime.now(timezone.utc)
+    site.status = SiteStatus.ARCHIVED
     db.commit()
     return {"ok": True}
+
+@router.post("/{site_id}/activate")
+def activate_site(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
+    query = db.query(Site).filter(Site.id == site_id)
+    if current_user.company_id:
+        query = query.filter(Site.company_id == current_user.company_id)
+    site = query.first()
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+    
+    if site.status == SiteStatus.ARCHIVED:
+        raise HTTPException(status_code=400, detail="Cannot activate an archived site")
+        
+    readiness = SiteReadinessService.evaluate(site, db)
+    if not readiness["ready"]:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=400, content={"ready": False, "missing": readiness["missing"]})
+        
+    site.status = SiteStatus.ACTIVE
+    site.activated_by = current_user.id
+    site.activated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(site)
+    return site
+
+@router.post("/{site_id}/suspend", response_model=schemas.SiteResponse)
+def suspend_site(site_id: str, request: schemas.SiteSuspendRequest, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
+    query = db.query(Site).filter(Site.id == site_id)
+    if current_user.company_id:
+        query = query.filter(Site.company_id == current_user.company_id)
+    site = query.first()
+    if not site:
+        raise HTTPException(status_code=404, detail="Site not found")
+        
+    if site.status == SiteStatus.ARCHIVED:
+        raise HTTPException(status_code=400, detail="Cannot suspend an archived site")
+        
+    site.status = SiteStatus.SUSPENDED
+    if request and request.reason:
+        site.suspension_reason = request.reason
+    db.commit()
+    db.refresh(site)
+    return site
 
 # --- Site Assignments ---
 
@@ -94,13 +142,14 @@ def assign_worker(site_id: str, assignment: schemas.SiteAssignment, db: Session 
     if user.status == WorkerStatus.SUSPENDED:
         raise HTTPException(status_code=400, detail="Suspended workers cannot be assigned")
         
-    if site.status != "active":
-        raise HTTPException(status_code=400, detail="Cannot assign worker to an inactive site")
+    if site.status == SiteStatus.ARCHIVED:
+        raise HTTPException(status_code=400, detail="Cannot assign worker to an archived site")
         
     if user.role != UserRole.WORKER:
         raise HTTPException(status_code=400, detail="Only Worker accounts may be assigned to sites")
     site.assigned_workers.append(user)
     db.commit()
+    SiteReadinessService.update_lifecycle_state(site, db)
     return {"message": "Worker assigned successfully"}
 
 @router.delete("/{site_id}/unassign-worker/{worker_id}")
@@ -119,6 +168,7 @@ def unassign_worker(site_id: str, worker_id: str, db: Session = Depends(get_db),
         
     site.assigned_workers.remove(user)
     db.commit()
+    SiteReadinessService.update_lifecycle_state(site, db)
     return {"message": "Worker unassigned successfully"}
 
 @router.post("/{site_id}/assign-department")
@@ -206,6 +256,7 @@ def generate_qr(site_id: str, db: Session = Depends(get_db), current_user: User 
     db.add(new_qr)
     db.commit()
     db.refresh(new_qr)
+    SiteReadinessService.update_lifecycle_state(site, db)
     return new_qr
 
 @router.post("/{site_id}/refresh-qr", response_model=schemas.QRCodeResponse)
@@ -234,6 +285,7 @@ def refresh_qr(site_id: str, db: Session = Depends(get_db), current_user: User =
     db.add(new_qr)
     db.commit()
     db.refresh(new_qr)
+    SiteReadinessService.update_lifecycle_state(site, db)
     return new_qr
 
 @router.get("/{site_id}/qr", response_model=schemas.QRCodeResponse)

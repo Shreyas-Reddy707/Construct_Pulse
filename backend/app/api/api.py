@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.endpoints import auth, companies, departments, contractors, users, sites, attendance, occupancy, public, dashboard, safety, qualifications
+from app.api.endpoints import auth, companies, departments, contractors, users, sites, attendance, attendance_governance, occupancy, public, dashboard, safety, qualifications, registration, registrations, emergency_muster, incidents, visitors, safety_operations, safety_communication, planning, notifications, payroll, reporting, configuration
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
@@ -9,8 +9,21 @@ api_router.include_router(departments.router, prefix="/departments", tags=["depa
 api_router.include_router(contractors.router, prefix="/contractors", tags=["contractors"])
 api_router.include_router(sites.router, prefix="/sites", tags=["sites"])
 api_router.include_router(attendance.router, prefix="/attendance", tags=["attendance"])
+api_router.include_router(attendance_governance.router, prefix="/attendance", tags=["attendance-governance"])
 api_router.include_router(occupancy.router, prefix="/occupancy", tags=["occupancy"])
 api_router.include_router(public.router, prefix="/public", tags=["public"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(safety.router, tags=["safety"])
 api_router.include_router(qualifications.router, tags=["qualifications"])
+api_router.include_router(registration.router, prefix="/register", tags=["registration"])
+api_router.include_router(registrations.router, prefix="/registrations", tags=["approval-queue"])
+api_router.include_router(emergency_muster.router, prefix="/muster", tags=["emergency-muster"])
+api_router.include_router(incidents.router, prefix="/incidents", tags=["incidents"])
+api_router.include_router(visitors.router, prefix="/visitors", tags=["visitors"])
+api_router.include_router(safety_operations.router, prefix="/safety", tags=["safety-operations"])
+api_router.include_router(safety_communication.router, prefix="/communications", tags=["safety-communications"])
+api_router.include_router(planning.router, prefix="/planning", tags=["planning"])
+api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+api_router.include_router(payroll.router, prefix="/payroll", tags=["payroll"])
+api_router.include_router(reporting.router, prefix="/reporting", tags=["reporting"])
+api_router.include_router(configuration.router, prefix="/configuration", tags=["configuration"])
