@@ -55,9 +55,9 @@ def get_current_active_superuser(
     return current_user
 
 class RoleChecker:
-    \"\"\"
+    """
     DEPRECATED: Retained for backwards compatibility. Use PermissionChecker instead.
-    \"\"\"
+    """
     def __init__(self, allowed_roles: list[UserRole]):
         self.allowed_roles = allowed_roles
 

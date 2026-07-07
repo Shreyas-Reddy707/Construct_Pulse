@@ -23,8 +23,7 @@ from .schemas import (
     QRCodeResponse,
     AttendanceCheckIn,
     AttendanceCheckOut,
-    AttendanceResponse,
-    OccupancyResponse
+    AttendanceResponse
 )
 
 from .responses import (

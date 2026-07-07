@@ -314,22 +314,6 @@ class User(SoftDeleteMixin, Base):
     emergency_contact_phone = Column(String, nullable=True)
     emergency_contact_relationship = Column(String, nullable=True)
 
-class Session(Base):
-    __tablename__ = "sessions"
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey("users.id"), nullable=False)
-    device_id = Column(String)
-    device_name = Column(String)
-    device_platform = Column(String)
-    app_version = Column(String)
-    login_time = Column(DateTime(timezone=True), default=func.now())
-    last_activity = Column(DateTime(timezone=True), default=func.now())
-    ip_address = Column(String)
-    push_token = Column(String)
-    is_revoked = Column(Boolean, default=False, nullable=False)
-    expires_at = Column(DateTime(timezone=True))
-
-    user = relationship("User")
 
     company = relationship("Company", back_populates="users")
     department = relationship("Department", back_populates="users")
@@ -352,6 +336,23 @@ class Session(Base):
     @property
     def assigned_site_names(self) -> str:
         return ", ".join([s.name for s in self.assigned_sites]) if self.assigned_sites else ""
+
+class Session(Base):
+    __tablename__ = "sessions"
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    device_id = Column(String)
+    device_name = Column(String)
+    device_platform = Column(String)
+    app_version = Column(String)
+    login_time = Column(DateTime(timezone=True), default=func.now())
+    last_activity = Column(DateTime(timezone=True), default=func.now())
+    ip_address = Column(String)
+    push_token = Column(String)
+    is_revoked = Column(Boolean, default=False, nullable=False)
+    expires_at = Column(DateTime(timezone=True))
+
+    user = relationship("User")
 
 class Site(SoftDeleteMixin, Base):
     __tablename__ = "sites"

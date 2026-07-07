@@ -2,10 +2,9 @@ from pydantic import BaseModel, Field, root_validator, validator, AnyHttpUrl
 from typing import Optional, List
 from datetime import datetime
 from app.models.models import (
-    UserRole, CheckInMethod, AttendanceStatus, WorkerStatus,
-    ComplianceStatus, Role, VisitorStatus, VisitorType, EscortStatus,
-    SiteStatus, ApprovalStatus, PlanSource, PlanStatus,
-    NotificationStatus, NotificationPriority, NotificationType,
+    UserRole, AttendanceStatus, WorkerStatus,
+    Role, SiteStatus, PlanSource, PlanStatus,
+    NotificationPriority, NotificationType,
     AdjustmentType, PayrollSource, PayrollStatus, ReportStatus, ReportSource, ReportType, AttendanceMethod, GovernanceAction, AttendanceReasonCode, SnapshotSource, MusterSessionStatus, MusterParticipantStatus, MusterParticipantType, IncidentStatus, IncidentSeverity, ParticipantRole, EvidenceType, IncidentSource, VisitorVisitStatus, VisitSource, ObservationType, ObservationStatus, CorrectiveActionStatus, RiskSeverity, ObservationSource, CorrectiveActionSource, CommunicationStatus, CommunicationSource, RecipientStatus, NotificationSource, ConfigCategory, ConfigurationStatus, ConfigurationSource
 )
 

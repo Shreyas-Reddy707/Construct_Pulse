@@ -7,7 +7,7 @@ from sqlalchemy import func, Sequence
 from app.models.models import (
     PayrollRun, PayrollEmployee, PayrollAdjustment, PayrollAuditLog,
     PayrollStatus, AdjustmentType, PayrollSource, User, UserRole,
-    Attendance, WorkerProfile, Department, Contractor
+    Attendance, Department, Contractor
 )
 from app.schemas.schemas import (
     PayrollRunCreate, PayrollRunResponse, PayrollEmployeeResponse,

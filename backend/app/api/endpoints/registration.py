@@ -27,7 +27,7 @@ def list_registration_requests(
     site_id: Optional[str] = None,
     company_id: Optional[str] = None,
     status: Optional[str] = None,
-    current_user = Depends(deps.get_current_active_user)
+    current_user = Depends(deps.get_current_user)
 ) -> any:
     """
     List registration requests. Subject to authorization based on caller's role and scope.
@@ -47,7 +47,7 @@ def list_registration_requests(
 def get_registration_request(
     request_id: str,
     db: Session = Depends(deps.get_db),
-    current_user = Depends(deps.get_current_active_user)
+    current_user = Depends(deps.get_current_user)
 ) -> any:
     """
     Get a specific registration request by ID.
