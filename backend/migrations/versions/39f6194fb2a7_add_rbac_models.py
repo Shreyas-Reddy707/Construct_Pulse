@@ -22,12 +22,12 @@ def upgrade() -> None:
     # Update UserRole enum outside transaction for PostgreSQL
     connection = op.get_bind()
     if connection.dialect.name == 'postgresql':
-        connection.execution_options(isolation_level="AUTOCOMMIT")
-        for new_role in ["Company Director", "Operations Manager", "Project Manager", "Site Manager", "Safety Officer", "Visitor"]:
-            try:
-                op.execute(f"ALTER TYPE userrole ADD VALUE IF NOT EXISTS '{new_role}'")
-            except Exception:
-                pass
+        with op.get_context().autocommit_block():
+            for new_role in ["Company Director", "Operations Manager", "Project Manager", "Site Manager", "Safety Officer", "Visitor"]:
+                try:
+                    op.execute(f"ALTER TYPE userrole ADD VALUE IF NOT EXISTS '{new_role}'")
+                except Exception:
+                    pass
 
     # Create tables
     op.create_table(
