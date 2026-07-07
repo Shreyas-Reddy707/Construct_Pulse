@@ -14,6 +14,10 @@ FastAPI application with enterprise-grade configuration:
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
+import os
+
+import firebase_admin
+from firebase_admin import credentials
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -105,6 +109,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         settings.ENVIRONMENT,
         settings.VERSION,
     )
+
+    if not firebase_admin._apps:
+        cred_path = settings.FIREBASE_SERVICE_ACCOUNT_PATH
+        if cred_path and os.path.exists(cred_path):
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
+            logger.info("Firebase Admin SDK initialized successfully.")
+        else:
+            logger.warning("FIREBASE_SERVICE_ACCOUNT_PATH is missing or invalid. Firebase Admin SDK not initialized.")
 
     db: Session = SessionLocal()
     try:
