@@ -1,0 +1,89 @@
+version: 2
+
+updates:
+  # -------------------------
+  # Backend (Python)
+  # -------------------------
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+      timezone: "Asia/Kolkata"
+
+    open-pull-requests-limit: 5
+
+    commit-message:
+      prefix: "build(deps)"
+      include: "scope"
+
+    labels:
+      - "dependencies"
+      - "backend"
+
+    groups:
+      backend-dependencies:
+        patterns:
+          - "*"
+
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
+  # -------------------------
+  # Flutter
+  # -------------------------
+  - package-ecosystem: "pub"
+    directory: "/mobile"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:15"
+      timezone: "Asia/Kolkata"
+
+    open-pull-requests-limit: 5
+
+    commit-message:
+      prefix: "build(deps)"
+      include: "scope"
+
+    labels:
+      - "dependencies"
+      - "flutter"
+
+    groups:
+      flutter-dependencies:
+        patterns:
+          - "*"
+
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
+
+  # -------------------------
+  # GitHub Actions
+  # -------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:30"
+      timezone: "Asia/Kolkata"
+
+    open-pull-requests-limit: 3
+
+    commit-message:
+      prefix: "ci"
+
+    labels:
+      - "dependencies"
+      - "github-actions"
+
+    groups:
+      github-actions:
+        patterns:
+          - "*"
