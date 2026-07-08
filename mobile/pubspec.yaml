@@ -21,7 +21,7 @@ dependencies:
   go_router: ^14.6.2
 
   # Networking
-  dio: ^5.7.0
+  dio: 5.10.0
   retrofit: ^4.4.1
 
   # Local Storage
@@ -48,18 +48,18 @@ dependencies:
   fl_chart: ^0.69.2
   percent_indicator: ^4.2.3
   flutter_animate: ^4.5.2
-  lottie: ^3.2.0
+  lottie: ^3.5.0
 
   # Utilities
   intl: ^0.20.2
   uuid: ^4.5.1
   json_annotation: ^4.9.0
   freezed_annotation: ^3.1.0
-  equatable: ^2.0.7
+  equatable: ^2.1.0
   dartz: ^0.10.1
 
   # File Handling
-  path_provider: ^2.1.5
+  path_provider: ^2.1.6
   open_filex: ^4.5.0
 
   # Permissions
@@ -71,12 +71,11 @@ dependencies:
   # Icons
   cupertino_icons: ^1.0.8
   flutter_phosphor_icons: ^0.0.1+6
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  build_runner: ^2.4.13
+  build_runner: ^2.15.1
   json_serializable: ^6.8.0
   freezed: ^3.2.6-dev.1
   retrofit_generator: ^10.2.7
