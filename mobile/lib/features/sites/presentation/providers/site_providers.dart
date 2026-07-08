@@ -22,18 +22,18 @@ final siteAssignmentsProvider = FutureProvider.autoDispose.family<Map<String, dy
   return repository.getSiteAssignments(id);
 });
 
-class SiteActionNotifier extends StateNotifier<AsyncValue<void>> {
-  final SiteRepository _repository;
-  final Ref _ref;
-
-  SiteActionNotifier(this._repository, this._ref) : super(const AsyncValue.data(null));
+class SiteActionNotifier extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() {
+    return const AsyncValue.data(null);
+  }
 
   Future<void> assignWorker(String siteId, String workerId) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.assignWorker(siteId, workerId);
-      _ref.invalidate(siteProvider(siteId));
-      _ref.invalidate(siteAssignmentsProvider(siteId));
+      await ref.read(siteRepositoryProvider).assignWorker(siteId, workerId);
+      ref.invalidate(siteProvider(siteId));
+      ref.invalidate(siteAssignmentsProvider(siteId));
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -43,9 +43,9 @@ class SiteActionNotifier extends StateNotifier<AsyncValue<void>> {
   Future<void> unassignWorker(String siteId, String workerId) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.unassignWorker(siteId, workerId);
-      _ref.invalidate(siteProvider(siteId));
-      _ref.invalidate(siteAssignmentsProvider(siteId));
+      await ref.read(siteRepositoryProvider).unassignWorker(siteId, workerId);
+      ref.invalidate(siteProvider(siteId));
+      ref.invalidate(siteAssignmentsProvider(siteId));
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -55,8 +55,8 @@ class SiteActionNotifier extends StateNotifier<AsyncValue<void>> {
   Future<String> createSite(Map<String, dynamic> data) async {
     state = const AsyncValue.loading();
     try {
-      final id = await _repository.createSite(data);
-      _ref.invalidate(sitesProvider);
+      final id = await ref.read(siteRepositoryProvider).createSite(data);
+      ref.invalidate(sitesProvider);
       state = const AsyncValue.data(null);
       return id;
     } catch (e, st) {
@@ -68,8 +68,8 @@ class SiteActionNotifier extends StateNotifier<AsyncValue<void>> {
   Future<void> generateQr(String siteId) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.generateSiteQr(siteId);
-      _ref.invalidate(siteQrProvider(siteId));
+      await ref.read(siteRepositoryProvider).generateSiteQr(siteId);
+      ref.invalidate(siteQrProvider(siteId));
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -77,6 +77,7 @@ class SiteActionNotifier extends StateNotifier<AsyncValue<void>> {
   }
 }
 
-final siteActionNotifierProvider = StateNotifierProvider<SiteActionNotifier, AsyncValue<void>>((ref) {
-  return SiteActionNotifier(ref.read(siteRepositoryProvider), ref);
-});
+final siteActionNotifierProvider =
+    NotifierProvider<SiteActionNotifier, AsyncValue<void>>(
+  SiteActionNotifier.new,
+);

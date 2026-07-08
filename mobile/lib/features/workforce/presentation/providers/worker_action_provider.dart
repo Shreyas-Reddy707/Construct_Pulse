@@ -5,21 +5,21 @@ import '../../../dashboard/presentation/screens/admin_dashboard_screen.dart';
 import 'worker_providers.dart';
 
 
-class WorkerActionNotifier extends StateNotifier<AsyncValue<void>> {
-  final WorkerRepository _repository;
-  final Ref _ref;
-
-  WorkerActionNotifier(this._repository, this._ref) : super(const AsyncValue.data(null));
+class WorkerActionNotifier extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() {
+    return const AsyncValue.data(null);
+  }
 
   void _invalidateProviders() {
-    _ref.invalidate(workersListProvider);
-    _ref.invalidate(adminDashboardSummaryProvider);
+    ref.invalidate(workersListProvider);
+    ref.invalidate(adminDashboardSummaryProvider);
   }
 
   Future<void> approve(String userId) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.approveWorker(userId);
+      await ref.read(workerRepositoryProvider).approveWorker(userId);
       _invalidateProviders();
       state = const AsyncValue.data(null);
     } catch (e, st) {
@@ -30,7 +30,7 @@ class WorkerActionNotifier extends StateNotifier<AsyncValue<void>> {
   Future<void> reject(String userId) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.rejectWorker(userId);
+      await ref.read(workerRepositoryProvider).rejectWorker(userId);
       _invalidateProviders();
       state = const AsyncValue.data(null);
     } catch (e, st) {
@@ -41,7 +41,7 @@ class WorkerActionNotifier extends StateNotifier<AsyncValue<void>> {
   Future<void> suspend(String userId) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.suspendWorker(userId);
+      await ref.read(workerRepositoryProvider).suspendWorker(userId);
       _invalidateProviders();
       state = const AsyncValue.data(null);
     } catch (e, st) {
@@ -52,7 +52,7 @@ class WorkerActionNotifier extends StateNotifier<AsyncValue<void>> {
   Future<void> reactivate(String userId) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.reactivateWorker(userId);
+      await ref.read(workerRepositoryProvider).reactivateWorker(userId);
       _invalidateProviders();
       state = const AsyncValue.data(null);
     } catch (e, st) {
@@ -61,6 +61,7 @@ class WorkerActionNotifier extends StateNotifier<AsyncValue<void>> {
   }
 }
 
-final workerActionNotifierProvider = StateNotifierProvider<WorkerActionNotifier, AsyncValue<void>>((ref) {
-  return WorkerActionNotifier(ref.read(workerRepositoryProvider), ref);
-});
+final workerActionNotifierProvider =
+    NotifierProvider<WorkerActionNotifier, AsyncValue<void>>(
+  WorkerActionNotifier.new,
+);

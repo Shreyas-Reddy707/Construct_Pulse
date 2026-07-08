@@ -45,16 +45,16 @@ final occupancyProvider = FutureProvider.autoDispose<List<Map<String, dynamic>>>
   return repository.getSiteOccupancy();
 });
 
-class AttendanceNotifier extends StateNotifier<AsyncValue<void>> {
-  final AttendanceRepository _repository;
-  final Ref _ref;
-
-  AttendanceNotifier(this._repository, this._ref) : super(const AsyncValue.data(null));
+class AttendanceNotifier extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() {
+    return const AsyncValue.data(null);
+  }
 
   Future<void> checkIn(String siteId, String qrToken, {double? lat, double? lng}) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.checkIn(siteId, qrToken, lat: lat, lng: lng);
+      await ref.read(attendanceRepositoryProvider).checkIn(siteId, qrToken, lat: lat, lng: lng);
       _invalidateProviders();
       state = const AsyncValue.data(null);
     } catch (e, st) {
@@ -65,7 +65,7 @@ class AttendanceNotifier extends StateNotifier<AsyncValue<void>> {
   Future<void> checkOut(String siteId, String qrToken, {double? lat, double? lng}) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.checkOut(siteId, qrToken, lat: lat, lng: lng);
+      await ref.read(attendanceRepositoryProvider).checkOut(siteId, qrToken, lat: lat, lng: lng);
       _invalidateProviders();
       state = const AsyncValue.data(null);
     } catch (e, st) {
@@ -74,14 +74,14 @@ class AttendanceNotifier extends StateNotifier<AsyncValue<void>> {
   }
   
   void _invalidateProviders() {
-    _ref.invalidate(todayAttendanceProvider);
-    _ref.invalidate(todayAttendanceSummaryProvider);
-    _ref.invalidate(liveAttendanceProvider);
-    _ref.invalidate(occupancyProvider);
-    _ref.invalidate(attendanceHistoryProvider);
-    _ref.invalidate(companyAttendanceHistoryProvider);
-    _ref.invalidate(adminDashboardSummaryProvider);
-    _ref.invalidate(occupancyStatsProvider);
+    ref.invalidate(todayAttendanceProvider);
+    ref.invalidate(todayAttendanceSummaryProvider);
+    ref.invalidate(liveAttendanceProvider);
+    ref.invalidate(occupancyProvider);
+    ref.invalidate(attendanceHistoryProvider);
+    ref.invalidate(companyAttendanceHistoryProvider);
+    ref.invalidate(adminDashboardSummaryProvider);
+    ref.invalidate(occupancyStatsProvider);
     // Also invalidate sites to ensure any background assignments become visible
     // Wait, we can't import sitesProvider here easily without circular dependencies or extra imports.
     // Instead, I'll let the user pull-to-refresh or rely on other invalidation points.
@@ -89,6 +89,6 @@ class AttendanceNotifier extends StateNotifier<AsyncValue<void>> {
 }
 
 final attendanceNotifierProvider =
-    StateNotifierProvider<AttendanceNotifier, AsyncValue<void>>((ref) {
-  return AttendanceNotifier(ref.read(attendanceRepositoryProvider), ref);
-});
+    NotifierProvider<AttendanceNotifier, AsyncValue<void>>(
+  AttendanceNotifier.new,
+);

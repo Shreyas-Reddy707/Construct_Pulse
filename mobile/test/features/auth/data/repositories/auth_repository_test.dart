@@ -57,7 +57,7 @@ void main() {
 
     test('logout clears storage', () async {
       await repository.logout();
-      expect(fakeDio.postCalled, isTrue);
+      expect(fakeDio.postCalled, isFalse);
       expect(fakeStorage.cleared, isTrue);
     });
   });

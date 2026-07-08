@@ -61,15 +61,21 @@ class AuthState {
 
 // ── Auth Notifier ───────────────────────────────────────────
 final authProvider =
-    StateNotifierProvider<AuthNotifier, AuthState>((ref) {
-  return AuthNotifier(ref.read(authRepositoryProvider));
-});
+    NotifierProvider<AuthNotifier, AuthState>(
+  AuthNotifier.new,
+);
 
-class AuthNotifier extends StateNotifier<AuthState> {
-  final AuthRepository _repo;
+class AuthNotifier extends Notifier<AuthState> {
+  AuthRepository get _repo => ref.read(authRepositoryProvider);
   Timer? _cooldownTimer;
 
-  AuthNotifier(this._repo) : super(const AuthState());
+  @override
+  AuthState build() {
+    ref.onDispose(() {
+      _cooldownTimer?.cancel();
+    });
+    return const AuthState();
+  }
 
   /// Check existing session on app start
   Future<void> checkSession() async {
@@ -314,9 +320,4 @@ class AuthNotifier extends StateNotifier<AuthState> {
     });
   }
 
-  @override
-  void dispose() {
-    _cooldownTimer?.cancel();
-    super.dispose();
-  }
 }

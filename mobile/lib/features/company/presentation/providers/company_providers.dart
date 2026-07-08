@@ -15,17 +15,17 @@ final companyUsersProvider = FutureProvider.autoDispose.family<List<User>, Strin
   return repository.getCompanyUsers(companyId);
 });
 
-class AssignAdminNotifier extends StateNotifier<AsyncValue<void>> {
-  final CompanyRepository _repository;
-  final Ref _ref;
-
-  AssignAdminNotifier(this._repository, this._ref) : super(const AsyncValue.data(null));
+class AssignAdminNotifier extends Notifier<AsyncValue<void>> {
+  @override
+  AsyncValue<void> build() {
+    return const AsyncValue.data(null);
+  }
 
   Future<void> assignAdmin(String companyId, String userId) async {
     state = const AsyncValue.loading();
     try {
-      await _repository.assignAdmin(companyId, userId);
-      _ref.invalidate(companyUsersProvider(companyId));
+      await ref.read(companyRepositoryProvider).assignAdmin(companyId, userId);
+      ref.invalidate(companyUsersProvider(companyId));
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -33,9 +33,10 @@ class AssignAdminNotifier extends StateNotifier<AsyncValue<void>> {
   }
 }
 
-final assignAdminNotifierProvider = StateNotifierProvider<AssignAdminNotifier, AsyncValue<void>>((ref) {
-  return AssignAdminNotifier(ref.read(companyRepositoryProvider), ref);
-});
+final assignAdminNotifierProvider =
+    NotifierProvider<AssignAdminNotifier, AsyncValue<void>>(
+  AssignAdminNotifier.new,
+);
 
 final companyProvider = FutureProvider.autoDispose.family<Company, String>((ref, id) async {
   final repository = ref.read(companyRepositoryProvider);
