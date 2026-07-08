@@ -1,0 +1,10 @@
+# Development dependencies
+-r requirements.txt
+
+# Testing
+pytest
+Faker
+email-validator
+
+# Static analysis
+pyrefly
