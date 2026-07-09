@@ -5,12 +5,15 @@ from datetime import datetime, timezone
 
 class QualificationService:
     @classmethod
-    def _get_worker_for_tenant(cls, db: Session, worker_id: str, current_user: User) -> User:
+    def _get_worker_for_tenant(cls, db: Session, worker_id: str, current_user: User, lock: bool = False) -> User:
         from app.models.models import UserRole
         query = db.query(User).filter(User.id == worker_id, User.is_deleted == False)
         
         if current_user.company_id and current_user.role != UserRole.SYSTEM_ADMIN:
             query = query.filter(User.company_id == current_user.company_id)
+            
+        if lock:
+            query = query.with_for_update()
             
         worker = query.first()
         if not worker:
@@ -37,7 +40,7 @@ class QualificationService:
 
     @classmethod
     def create_worker_qualification(cls, db: Session, worker_id: str, qual_in: WorkerQualificationCreate, current_user: User) -> WorkerQualification:
-        cls._get_worker_for_tenant(db, worker_id, current_user)
+        cls._get_worker_for_tenant(db, worker_id, current_user, lock=True)
 
         # Reject duplicate active qualifications for the same worker and qualification type
         existing = db.query(WorkerQualification).filter(

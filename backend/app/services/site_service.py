@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from app.models.models import Site, User, Department, Contractor, SiteQRCode, UserRole, SiteStatus, WorkerStatus
 from app.schemas import schemas
-from app.core.exceptions import ResourceNotFoundException, ValidationException, StateTransitionException
+from app.core.exceptions import ResourceNotFoundException, ValidationException, StateTransitionException, ConflictException
 from app.services.site_readiness_service import SiteReadinessService
 from datetime import datetime, timedelta, timezone
 import uuid
@@ -20,10 +20,12 @@ class SiteService:
         return query.offset(skip).limit(limit).all()
 
     @classmethod
-    def get_site(cls, db: Session, site_id: str, current_user: User) -> Site:
+    def get_site(cls, db: Session, site_id: str, current_user: User, lock: bool = False) -> Site:
         query = db.query(Site).filter(Site.id == site_id)
         if current_user.company_id:
             query = query.filter(Site.company_id == current_user.company_id)
+        if lock:
+            query = query.with_for_update()
         site = query.first()
         if not site:
             raise ResourceNotFoundException("Site not found")
@@ -41,7 +43,7 @@ class SiteService:
 
     @classmethod
     def update_site(cls, db: Session, site_id: str, current_user: User, site_in: schemas.SiteUpdate) -> Site:
-        site = cls.get_site(db, site_id, current_user)
+        site = cls.get_site(db, site_id, current_user, lock=True)
         update_data = site_in.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(site, key, value)
@@ -52,7 +54,7 @@ class SiteService:
 
     @classmethod
     def delete_site(cls, db: Session, site_id: str, current_user: User) -> None:
-        site = cls.get_site(db, site_id, current_user)
+        site = cls.get_site(db, site_id, current_user, lock=True)
         site.is_deleted = True
         site.deleted_at = datetime.now(timezone.utc)
         site.status = SiteStatus.ARCHIVED
@@ -60,7 +62,7 @@ class SiteService:
 
     @classmethod
     def activate_site(cls, db: Session, site_id: str, current_user: User) -> Site:
-        site = cls.get_site(db, site_id, current_user)
+        site = cls.get_site(db, site_id, current_user, lock=True)
         if site.status == SiteStatus.ARCHIVED:
             raise StateTransitionException("Cannot activate an archived site")
             
@@ -80,7 +82,7 @@ class SiteService:
 
     @classmethod
     def suspend_site(cls, db: Session, site_id: str, current_user: User, request: schemas.SiteSuspendRequest) -> Site:
-        site = cls.get_site(db, site_id, current_user)
+        site = cls.get_site(db, site_id, current_user, lock=True)
         if site.status == SiteStatus.ARCHIVED:
             raise StateTransitionException("Cannot suspend an archived site")
             
@@ -93,7 +95,7 @@ class SiteService:
 
     @classmethod
     def assign_worker(cls, db: Session, site_id: str, current_user: User, assignment: schemas.SiteAssignment) -> None:
-        site = cls.get_site(db, site_id, current_user)
+        site = cls.get_site(db, site_id, current_user, lock=True)
         
         user = db.query(User).filter(User.id == assignment.worker_id)
         if current_user.company_id:
@@ -115,6 +117,9 @@ class SiteService:
         if user.role != UserRole.WORKER:
             raise ValidationException("Only Worker accounts may be assigned to sites")
             
+        if user in site.assigned_workers:
+            raise ConflictException("Worker is already assigned to this site")
+            
         site.assigned_workers.append(user)
         db.flush()
         SiteReadinessService.update_lifecycle_state(site, db)
@@ -122,7 +127,7 @@ class SiteService:
 
     @classmethod
     def unassign_worker(cls, db: Session, site_id: str, worker_id: str, current_user: User) -> None:
-        site = cls.get_site(db, site_id, current_user)
+        site = cls.get_site(db, site_id, current_user, lock=True)
         user = next((u for u in site.assigned_workers if str(u.id) == worker_id), None)
         if not user:
             raise ResourceNotFoundException("Worker not assigned to this site")
@@ -134,7 +139,7 @@ class SiteService:
 
     @classmethod
     def assign_department(cls, db: Session, site_id: str, current_user: User, assignment: schemas.SiteAssignment) -> None:
-        site = cls.get_site(db, site_id, current_user)
+        site = cls.get_site(db, site_id, current_user, lock=True)
         
         dept = db.query(Department).filter(Department.id == assignment.department_id)
         if current_user.company_id:
@@ -143,12 +148,15 @@ class SiteService:
         if not dept:
             raise ResourceNotFoundException("Site or Department not found")
             
+        if dept in site.assigned_departments:
+            raise ConflictException("Department is already assigned to this site")
+            
         site.assigned_departments.append(dept)
         db.commit()
 
     @classmethod
     def assign_contractor(cls, db: Session, site_id: str, current_user: User, assignment: schemas.SiteAssignment) -> None:
-        site = cls.get_site(db, site_id, current_user)
+        site = cls.get_site(db, site_id, current_user, lock=True)
         
         contractor = db.query(Contractor).filter(Contractor.id == assignment.contractor_id)
         if current_user.company_id:
@@ -156,6 +164,9 @@ class SiteService:
         contractor = contractor.first()
         if not contractor:
             raise ResourceNotFoundException("Site or Contractor not found")
+            
+        if contractor in site.assigned_contractors:
+            raise ConflictException("Contractor is already assigned to this site")
             
         site.assigned_contractors.append(contractor)
         db.commit()
@@ -171,7 +182,7 @@ class SiteService:
 
     @classmethod
     def generate_qr(cls, db: Session, site_id: str, current_user: User) -> SiteQRCode:
-        site = cls.get_site(db, site_id, current_user)
+        site = cls.get_site(db, site_id, current_user, lock=True)
         now_utc = datetime.now(timezone.utc)
 
         active_qrs = db.query(SiteQRCode).filter(
@@ -201,7 +212,7 @@ class SiteService:
 
     @classmethod
     def refresh_qr(cls, db: Session, site_id: str, current_user: User) -> SiteQRCode:
-        site = cls.get_site(db, site_id, current_user)
+        site = cls.get_site(db, site_id, current_user, lock=True)
         now_utc = datetime.now(timezone.utc)
 
         db.query(SiteQRCode).filter(
