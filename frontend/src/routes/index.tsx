@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { AuthGuard } from "./AuthGuard";
+import { LoginPage } from "@/modules/auth/pages/LoginPage";
 
 export const router = createBrowserRouter([
   {
@@ -10,7 +11,7 @@ export const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <div>Login Page Placeholder</div>,
+        element: <LoginPage />,
       },
     ],
   },

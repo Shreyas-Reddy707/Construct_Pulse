@@ -24,8 +24,13 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Handle 401 Unauthorized globally
+    // Endpoints that should not trigger global logout on 401
+    const publicEndpoints = ["/login", "/auth/login", "/forgot-password", "/reset-password"];
+    const requestUrl = error.config?.url || "";
+    const isPublicEndpoint = publicEndpoints.some(endpoint => requestUrl.endsWith(endpoint));
+
+    if (error.response?.status === 401 && !isPublicEndpoint) {
+      // Handle 401 Unauthorized globally for protected routes
       useAuthStore.getState().clearAuth();
       toast.error("Session expired. Please log in again.");
       if (window.location.pathname !== "/login") {

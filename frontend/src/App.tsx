@@ -5,17 +5,10 @@ import { ErrorBoundary } from "@/providers/ErrorBoundary";
 import { queryClient } from "@/lib/queryClient";
 import { router } from "@/routes";
 import { Toaster } from "@/components/ui/sonner";
-import { useEffect } from "react";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useAppBootstrap } from "@/modules/app/hooks/useAppBootstrap";
 
 export default function App() {
-  const setHydrated = useAuthStore((state) => state.setHydrated);
-
-  useEffect(() => {
-    // In a real app with persistent storage (like localStorage zustand middleware),
-    // hydration logic goes here. For MVP in-memory + simple token, we can just mark as hydrated.
-    setHydrated(true);
-  }, [setHydrated]);
+  useAppBootstrap();
 
   return (
     <ErrorBoundary>
