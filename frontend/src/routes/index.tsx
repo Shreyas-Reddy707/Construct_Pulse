@@ -5,6 +5,7 @@ import { AuthGuard } from "./AuthGuard";
 import { LoginPage } from "@/modules/auth/pages/LoginPage";
 import { DashboardPage } from "@/modules/dashboard/pages/DashboardPage";
 import { WorkerDirectoryPage } from "@/modules/workers/pages/WorkerDirectoryPage";
+import { SiteDirectoryPage } from "@/modules/sites/pages/SiteDirectoryPage";
 
 export const router = createBrowserRouter([
   {
@@ -31,6 +32,10 @@ export const router = createBrowserRouter([
           {
             path: "workers",
             element: <WorkerDirectoryPage />,
+          },
+          {
+            path: "sites",
+            element: <SiteDirectoryPage />,
           },
           // Future protected routes go here
         ],
