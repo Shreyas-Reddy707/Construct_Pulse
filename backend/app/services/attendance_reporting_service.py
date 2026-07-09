@@ -26,27 +26,7 @@ class AttendanceReportingService:
         return query
 
     @classmethod
-    def _build_query(cls, session: Session, query_params: AttendanceReportQuery):
-        # We need correction count, so we'll use an outer join with a subquery
-        correction_subq = session.query(
-            AttendanceCorrectionLog.attendance_id,
-            func.count(AttendanceCorrectionLog.id).label('correction_count')
-        ).group_by(AttendanceCorrectionLog.attendance_id).subquery()
-
-        query = session.query(
-            Attendance,
-            User.name.label("worker_name"),
-            Site.name.label("site_name"),
-            func.coalesce(correction_subq.c.correction_count, 0).label('correction_count')
-        ).join(
-            User, Attendance.user_id == User.id, isouter=True
-        ).join(
-            Site, Attendance.site_id == Site.id, isouter=True
-        ).outerjoin(
-            correction_subq, Attendance.id == correction_subq.c.attendance_id
-        )
-
-        # Filters
+    def _apply_base_filters(cls, query, query_params: AttendanceReportQuery):
         if query_params.start_date:
             query = query.filter(Attendance.check_in_time >= query_params.start_date)
         if query_params.end_date:
@@ -59,6 +39,29 @@ class AttendanceReportingService:
             query = query.filter(Attendance.company_id == query_params.company_id)
         if query_params.status:
             query = query.filter(Attendance.status == query_params.status)
+        return query
+
+    @classmethod
+    def _build_query(cls, session: Session, query_params: AttendanceReportQuery):
+        # Correlated scalar subquery: evaluates ONLY for filtered attendance records, eliminating the full-table scan.
+        correction_subq = session.query(
+            func.count(AttendanceCorrectionLog.id)
+        ).filter(
+            AttendanceCorrectionLog.attendance_id == Attendance.id
+        ).correlate(Attendance).scalar_subquery()
+
+        query = session.query(
+            Attendance,
+            User.name.label("worker_name"),
+            Site.name.label("site_name"),
+            func.coalesce(correction_subq, 0).label('correction_count')
+        ).select_from(Attendance).join(
+            User, Attendance.user_id == User.id, isouter=True
+        ).join(
+            Site, Attendance.site_id == Site.id, isouter=True
+        )
+
+        query = cls._apply_base_filters(query, query_params)
 
         # Sorting (Whitelist)
         sort_field = query_params.sort_by if query_params.sort_by in cls.ALLOWED_SORT_FIELDS else "check_in_time"
@@ -103,8 +106,10 @@ class AttendanceReportingService:
         query_params = cls._enforce_tenant_isolation(current_user, query_params)
         query = cls._build_query(session, query_params)
         
-        # Count total records matching filters (before pagination)
-        total_records = query.count()
+        # Count total records efficiently by skipping joins and subqueries
+        count_query = session.query(Attendance.id)
+        count_query = cls._apply_base_filters(count_query, query_params)
+        total_records = count_query.count()
         
         # Pagination
         query = query.offset(query_params.skip).limit(query_params.limit)
