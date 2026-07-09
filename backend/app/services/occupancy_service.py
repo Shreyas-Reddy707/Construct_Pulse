@@ -5,7 +5,8 @@ from sqlalchemy import func, case
 
 from app.models.models import (
     Attendance, User, Department, Contractor, 
-    OccupancySnapshot, AttendanceStatus, IdentityType, SnapshotSource
+    OccupancySnapshot, AttendanceStatus, IdentityType, SnapshotSource,
+    Site, UserRole
 )
 from app.schemas.schemas import (
     OccupancyQuery, OccupancySummary, OccupancyWorker,
@@ -14,6 +15,26 @@ from app.schemas.schemas import (
 )
 
 class OccupancyService:
+    @classmethod
+    def _enforce_tenant_isolation(cls, session: Session, current_user: User, query: OccupancyQuery) -> OccupancyQuery:
+        from app.core.exceptions import ResourceNotFoundException, ValidationException, AuthorizationException
+        if current_user.role == UserRole.COMPANY_ADMIN:
+            if query.site_id:
+                site = session.query(Site).filter(Site.id == query.site_id, Site.company_id == current_user.company_id).first()
+                if not site:
+                    raise ResourceNotFoundException("Site not found")
+            else:
+                raise ValidationException("site_id is required")
+        elif current_user.role == UserRole.SITE_MANAGER:
+            if not query.site_id:
+                 raise ValidationException("site_id is required")
+            valid_site = any(s.id == query.site_id for s in current_user.assigned_sites)
+            if not valid_site:
+                 raise AuthorizationException("Not assigned to this site")
+        elif current_user.role == UserRole.WORKER:
+            raise AuthorizationException("Workers cannot access occupancy data")
+        return query
+
     @staticmethod
     def _build_base_query(session: Session, query: OccupancyQuery):
         """
@@ -98,11 +119,12 @@ class OccupancyService:
         return VisitorOccupancy(visitor_count=visitor_count)
 
     @classmethod
-    def get_dashboard(cls, session: Session, query: OccupancyQuery) -> OccupancyDashboard:
+    def get_dashboard(cls, session: Session, query: OccupancyQuery, current_user: User) -> OccupancyDashboard:
         """
         Aggregates multiple occupancy metrics into a single dashboard projection.
         Performs aggregations entirely in SQL.
         """
+        query = cls._enforce_tenant_isolation(session, current_user, query)
         base_filters = cls._get_base_filters(query)
         
         # Total Occupancy and Breakdowns
@@ -148,10 +170,11 @@ class OccupancyService:
         )
 
     @classmethod
-    def get_muster_list(cls, session: Session, query: OccupancyQuery) -> List[OccupancyWorker]:
+    def get_muster_list(cls, session: Session, query: OccupancyQuery, current_user: User) -> List[OccupancyWorker]:
         """
         Returns a paginated list of workers currently occupying a site.
         """
+        query = cls._enforce_tenant_isolation(session, current_user, query)
         q = cls._build_base_query(session, query)
         
         q = session.query(
@@ -216,14 +239,15 @@ class OccupancyService:
         cls, 
         session: Session, 
         site_id: str, 
-        captured_by: Optional[str] = None, 
+        current_user: User,
         source: SnapshotSource = SnapshotSource.MANUAL
     ) -> OccupancySnapshotResponse:
         """
         Calculates current occupancy and explicitly stores a snapshot.
         """
         query = OccupancyQuery(site_id=site_id)
-        dashboard = cls.get_dashboard(session, query)
+        query = cls._enforce_tenant_isolation(session, current_user, query)
+        dashboard = cls.get_dashboard(session, query, current_user)
 
         dept_dict = {d.department_name: d.worker_count for d in dashboard.department_breakdown}
         cont_dict = {c.contractor_name: c.worker_count for c in dashboard.contractor_breakdown}
@@ -236,7 +260,7 @@ class OccupancyService:
             contractor_breakdown=cont_dict,
             visitor_breakdown=vis_dict,
             snapshot_source=source,
-            captured_by=captured_by,
+            captured_by=current_user.id,
             snapshot_version=1
         )
         
@@ -254,7 +278,9 @@ class OccupancyService:
         return None
 
     @classmethod
-    def list_snapshots(cls, session: Session, site_id: str, skip: int = 0, limit: int = 100) -> List[OccupancySnapshotResponse]:
+    def list_snapshots(cls, session: Session, site_id: str, current_user: User, skip: int = 0, limit: int = 100) -> List[OccupancySnapshotResponse]:
+        query = OccupancyQuery(site_id=site_id)
+        cls._enforce_tenant_isolation(session, current_user, query)
         snapshots = session.query(OccupancySnapshot).filter(
             OccupancySnapshot.site_id == site_id
         ).order_by(OccupancySnapshot.timestamp.desc()).offset(skip).limit(limit).all()

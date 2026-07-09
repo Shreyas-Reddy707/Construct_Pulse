@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user
@@ -22,16 +22,12 @@ def generate_report(
     Orchestrates data from certified downstream foundations.
     """
     # Assuming PermissionChecker enforces reporting.generate and validates company_id here
-    try:
-        report = ReportingService.generate_report(
-            db=db,
-            company_id=current_user.company_id,
-            current_user_id=current_user.id,
-            payload=payload
-        )
-        return report
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return ReportingService.generate_report(
+        db=db,
+        company_id=current_user.company_id,
+        current_user_id=current_user.id,
+        payload=payload
+    )
 
 @router.post("/{report_id}/archive", response_model=ComplianceReportResponse)
 def archive_report(
@@ -43,15 +39,11 @@ def archive_report(
     Archive a compliance report.
     This increments the report version and adds an audit log.
     """
-    try:
-        report = ReportingService.archive(
-            db=db,
-            report_id=report_id,
-            current_user_id=current_user.id
-        )
-        return report
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return ReportingService.archive(
+        db=db,
+        report_id=report_id,
+        current_user_id=current_user.id
+    )
 
 @router.get("", response_model=List[ComplianceReportResponse])
 def list_reports(
@@ -97,6 +89,4 @@ def get_report(
         report_id=report_id,
         company_id=current_user.company_id
     )
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
     return report

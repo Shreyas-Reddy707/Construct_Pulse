@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user
@@ -18,15 +18,12 @@ def draft_configuration(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    try:
-        return PlatformConfigurationService.create_draft(
-            db=db,
-            company_id=current_user.company_id,
-            current_user_id=current_user.id,
-            payload=payload
-        )
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return PlatformConfigurationService.create_draft(
+        db=db,
+        company_id=current_user.company_id,
+        current_user_id=current_user.id,
+        payload=payload
+    )
 
 @router.post("/{version_id}/approve", response_model=ConfigurationResponse)
 def approve_configuration(
@@ -35,30 +32,22 @@ def approve_configuration(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    try:
-        return PlatformConfigurationService.approve(
-            db=db,
-            version_id=version_id,
-            current_user_id=current_user.id,
-            payload=payload
-        )
-    except ValueError as ve:
-        raise HTTPException(status_code=404, detail=str(ve))
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return PlatformConfigurationService.approve(
+        db=db,
+        version_id=version_id,
+        current_user_id=current_user.id,
+        payload=payload
+    )
 
 @router.get("", response_model=List[ConfigurationResponse])
 def list_configurations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    try:
-        return PlatformConfigurationService.list_configurations(
-            db=db,
-            company_id=current_user.company_id
-        )
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return PlatformConfigurationService.list_configurations(
+        db=db,
+        company_id=current_user.company_id
+    )
 
 @router.get("/{config_key}/history", response_model=List[ConfigurationVersionResponse])
 def get_configuration_history(
@@ -66,24 +55,18 @@ def get_configuration_history(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    try:
-        return PlatformConfigurationService.get_configuration_history(
-            db=db,
-            company_id=current_user.company_id,
-            config_key=config_key
-        )
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return PlatformConfigurationService.get_configuration_history(
+        db=db,
+        company_id=current_user.company_id,
+        config_key=config_key
+    )
 
 @router.get("/dashboard", response_model=ConfigurationDashboard)
 def get_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    try:
-        return PlatformConfigurationService.dashboard(
-            db=db,
-            company_id=current_user.company_id
-        )
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return PlatformConfigurationService.dashboard(
+        db=db,
+        company_id=current_user.company_id
+    )

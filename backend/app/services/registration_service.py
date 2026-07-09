@@ -1,73 +1,55 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_, func
-from fastapi import HTTPException
+from sqlalchemy import or_, and_
 from datetime import datetime
 import uuid
 
-from app.models.models import RegistrationRequest, User, SiteQRCode, RegistrationStatus, RegistrationSource
+from app.models.models import RegistrationRequest, User, SiteQRCode, RegistrationStatus, RegistrationSource, Site
 from app.schemas.schemas import RegistrationRequestCreate
 from app.services.secure_token_service import SecureTokenService
 
 class RegistrationService:
 
     @classmethod
-    def validate_request(cls, session: Session, qr_token: str) -> SiteQRCode:
-        """
-        Validates the token and retrieves the associated token record.
-        """
-        status = SecureTokenService.validate_token(session, qr_token)
-        if status != "VALID":
-            raise HTTPException(status_code=400, detail=f"Invalid or {status.lower()} registration token.")
-
-        qr_record = session.query(SiteQRCode).filter(SiteQRCode.qr_token == qr_token).first()
-        if not qr_record:
-            raise HTTPException(status_code=400, detail="Site could not be resolved from token.")
+    def validate_token(cls, db: Session, token: str) -> Site:
+        from app.core.exceptions import ValidationException, ResourceNotFoundException
+        site = db.query(Site).filter(Site.registration_token == token).first()
+        if not site:
+            raise ValidationException("Invalid or inactive registration token.")
             
-        return qr_record
+        if not site.is_active:
+            raise ValidationException("Invalid or inactive registration token.")
+            
+        if not site.company_id:
+            raise ResourceNotFoundException("Site could not be resolved from token.")
+            
+        return site
 
     @classmethod
-    def detect_duplicates(cls, session: Session, phone_number: str, email: str = None) -> None:
+    def detect_duplicates(cls, db: Session, phone_number: str, email: str = None) -> None:
         """
         Detects duplicates across existing RegistrationRequests and Users.
         """
+        from app.core.exceptions import ConflictException
         # Check Users (Active identities)
         # Any existing User with this phone or email blocks a new registration request.
-        user_query = session.query(User).filter(User.phone_number == phone_number)
-        if email:
-            user_query = session.query(User).filter(
-                or_(User.phone_number == phone_number, User.email == email)
-            )
-        
-        if user_query.first():
-            raise HTTPException(status_code=400, detail="A user with this phone number or email already exists.")
+        existing_user = db.query(User).filter(
+            or_(User.phone_number == phone_number, User.email == email)
+        ).first()
+        if existing_user:
+            raise ConflictException("A user with this phone number or email already exists.")
 
         # Check RegistrationRequests (In-flight applications)
         # Active registrations (PENDING, UNDER_REVIEW, APPROVED) prevent duplicates.
         # Terminal registrations (REJECTED, WITHDRAWN) do not permanently block future applications.
-        reg_query = session.query(RegistrationRequest).filter(
-            RegistrationRequest.phone_number == phone_number,
-            RegistrationRequest.status.in_([
-                RegistrationStatus.PENDING, 
-                RegistrationStatus.UNDER_REVIEW, 
-                RegistrationStatus.APPROVED
-            ])
-        )
-        
-        if email:
-            reg_query = session.query(RegistrationRequest).filter(
-                or_(
-                    RegistrationRequest.phone_number == phone_number,
-                    RegistrationRequest.email == email
-                ),
-                RegistrationRequest.status.in_([
-                    RegistrationStatus.PENDING, 
-                    RegistrationStatus.UNDER_REVIEW, 
-                    RegistrationStatus.APPROVED
-                ])
-            )
-            
-        if reg_query.first():
-            raise HTTPException(status_code=400, detail="An active registration request with this phone number or email already exists.")
+        existing_req = db.query(RegistrationRequest).filter(
+            or_(
+                RegistrationRequest.phone_number == phone_number,
+                RegistrationRequest.email == email
+            ),
+            RegistrationRequest.status.in_([RegistrationStatus.PENDING, RegistrationStatus.UNDER_REVIEW])
+        ).first()
+        if existing_req:
+            raise ConflictException("An active registration request with this phone number or email already exists.")
 
     @classmethod
     def _generate_registration_number(cls, session: Session) -> str:
@@ -90,7 +72,7 @@ class RegistrationService:
         Processes a new registration request.
         """
         # 1. Validate Token
-        qr_record = cls.validate_request(session, req_in.qr_token)
+        site = cls.validate_token(session, req_in.qr_token)
         
         # 2. Detect Duplicates
         cls.detect_duplicates(session, req_in.phone_number, req_in.email)
@@ -105,13 +87,12 @@ class RegistrationService:
             full_name=req_in.full_name,
             phone_number=req_in.phone_number,
             email=req_in.email,
-            requested_company_id=req_in.requested_company_id,
-            requested_site_id=qr_record.site_id,
+            requested_company_id=site.company_id,
+            requested_site_id=site.id,
             status=RegistrationStatus.PENDING,
             payload=req_in.payload,
             payload_version=1,
             registration_source=RegistrationSource.SECURE_TOKEN,
-            secure_token_generation=qr_record.generation,
             submitted_from_token=req_in.qr_token
         )
         
@@ -122,10 +103,11 @@ class RegistrationService:
         return req_obj
 
     @classmethod
-    def get_request(cls, session: Session, request_id: str) -> RegistrationRequest:
-        req = session.query(RegistrationRequest).filter(RegistrationRequest.id == request_id).first()
+    def get_status(cls, db: Session, request_id: str) -> RegistrationRequest:
+        from app.core.exceptions import ResourceNotFoundException
+        req = db.query(RegistrationRequest).filter(RegistrationRequest.id == request_id).first()
         if not req:
-            raise HTTPException(status_code=404, detail="Registration request not found.")
+            raise ResourceNotFoundException("Registration request not found.")
         return req
 
     @classmethod

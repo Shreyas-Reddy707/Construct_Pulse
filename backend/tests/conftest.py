@@ -9,11 +9,24 @@ from app.core.security import create_access_token
 import uuid
 from datetime import datetime, timezone, timedelta
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+import os
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+from app.core.config import settings
+
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    settings.DATABASE_URL.replace(
+        "constructpulse",
+        "constructpulse_test"
+    )
 )
+
+TEST_DATABASE_URL = TEST_DATABASE_URL.replace(
+    "postgresql://",
+    "postgresql+psycopg://"
+)
+
+engine = create_engine(TEST_DATABASE_URL)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base.metadata.create_all(bind=engine)

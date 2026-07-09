@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -8,31 +8,11 @@ import io
 
 from app.db.database import get_db
 from app.schemas import schemas
-from app.models.models import User, UserRole, AttendanceStatus
+from app.models.models import User, AttendanceStatus
 from app.api.deps import get_current_user, PermissionChecker
 from app.services.attendance_reporting_service import AttendanceReportingService
 
 router = APIRouter()
-
-def _enforce_tenant_isolation(current_user: User, query: schemas.AttendanceReportQuery) -> schemas.AttendanceReportQuery:
-    """
-    Enforces authorization isolation based on the user's role.
-    """
-    if current_user.role == UserRole.WORKER:
-        # Workers can only see themselves
-        query.worker_id = current_user.id
-        query.company_id = current_user.company_id
-    elif current_user.role == UserRole.SITE_MANAGER:
-        # Site managers are locked to their company (site isolation handled at query time or explicitly here)
-        query.company_id = current_user.company_id
-        # Note: If site_id is passed, it should be validated against their managed sites. 
-        # For foundation, locking to company is base.
-    else:
-        # Company Admins and above
-        if current_user.company_id:
-            query.company_id = current_user.company_id
-            
-    return query
 
 @router.post("/reports", response_model=schemas.AttendanceReportResponse)
 def get_attendance_report(
@@ -43,8 +23,7 @@ def get_attendance_report(
     """
     Paginated, filtered attendance reporting endpoint.
     """
-    query = _enforce_tenant_isolation(current_user, query)
-    return AttendanceReportingService.get_report(db, query)
+    return AttendanceReportingService.get_report(db, query, current_user)
 
 @router.get("/reports/live", response_model=schemas.AttendanceReportResponse)
 def get_live_attendance(
@@ -63,8 +42,7 @@ def get_live_attendance(
         skip=skip,
         limit=limit
     )
-    query = _enforce_tenant_isolation(current_user, query)
-    return AttendanceReportingService.get_report(db, query)
+    return AttendanceReportingService.get_report(db, query, current_user)
 
 @router.get("/me/today", response_model=schemas.AttendanceReportResponse)
 def get_my_today_attendance(
@@ -81,7 +59,7 @@ def get_my_today_attendance(
         skip=0,
         limit=50
     )
-    return AttendanceReportingService.get_report(db, query)
+    return AttendanceReportingService.get_report(db, query, current_user)
 
 @router.post("/export/csv")
 def export_attendance_csv(
@@ -92,24 +70,33 @@ def export_attendance_csv(
     """
     Streams attendance history as a CSV file.
     """
-    query = _enforce_tenant_isolation(current_user, query)
-    
     def iter_csv():
         output = io.StringIO()
         writer = csv.writer(output)
         # Header
-        writer.writerow(["ID", "Worker Name", "Site Name", "Check In", "Check Out", "Status", "Check In Method", "Check Out Method", "Correction Count", "Has Corrections"])
+        writer.writerow([
+            "Attendance ID", "Worker Name", "Site Name", 
+            "Check-In Time", "Check-Out Time", "Status",
+            "Check-In Method", "Check-Out Method",
+            "Correction Count", "Has Corrections"
+        ])
         yield output.getvalue()
-        output.seek(0)
         output.truncate(0)
+        output.seek(0)
         
-        # Data streaming
-        for row in AttendanceReportingService.get_export_generator(db, query):
+        for row in AttendanceReportingService.get_export_generator(db, query, current_user):
             writer.writerow(row)
             yield output.getvalue()
-            output.seek(0)
             output.truncate(0)
-            
-    response = StreamingResponse(iter_csv(), media_type="text/csv")
-    response.headers["Content-Disposition"] = "attachment; filename=attendance_export.csv"
-    return response
+            output.seek(0)
+
+    filename = f"attendance_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+    headers = {
+        "Content-Disposition": f"attachment; filename={filename}"
+    }
+
+    return StreamingResponse(
+        iter_csv(), 
+        media_type="text/csv", 
+        headers=headers
+    )

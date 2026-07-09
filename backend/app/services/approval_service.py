@@ -1,5 +1,4 @@
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
 from sqlalchemy import or_, and_
 from datetime import datetime
 
@@ -13,6 +12,7 @@ from app.models.models import (
     Company
 )
 from app.services.identity_mapper import IdentityMapper
+from app.core.exceptions import ResourceNotFoundException, StateTransitionException, ConflictException, AuthorizationException
 
 class ApprovalService:
     """
@@ -50,7 +50,7 @@ class ApprovalService:
         ).first()
         
         if not req:
-            raise HTTPException(status_code=404, detail="Registration request not found or access denied")
+            raise ResourceNotFoundException("Registration request not found or access denied")
         return req
 
     @classmethod
@@ -60,7 +60,7 @@ class ApprovalService:
         """
         req = cls.get_request(session, request_id, admin.company_id)
         if req.status != RegistrationStatus.PENDING:
-            raise HTTPException(status_code=400, detail="Only PENDING requests can be moved to UNDER_REVIEW")
+            raise StateTransitionException("Only PENDING requests can be moved to UNDER_REVIEW")
             
         req.status = RegistrationStatus.UNDER_REVIEW
         session.commit()
@@ -74,13 +74,13 @@ class ApprovalService:
         """
         req = session.query(RegistrationRequest).filter(RegistrationRequest.id == request_id).with_for_update().first()
         if not req:
-            raise HTTPException(status_code=404, detail="Request not found")
+            raise ResourceNotFoundException("Request not found")
             
         # Security validation
         cls.get_request(session, request_id, admin.company_id)
 
         if req.status not in [RegistrationStatus.PENDING, RegistrationStatus.UNDER_REVIEW]:
-            raise HTTPException(status_code=400, detail=f"Cannot reject request in {req.status.value} status")
+            raise StateTransitionException(f"Cannot reject request in {req.status.value} status")
             
         req.status = RegistrationStatus.REJECTED
         if notes:
@@ -100,21 +100,21 @@ class ApprovalService:
         # 1. Acquire row lock to prevent double approval concurrency
         req = session.query(RegistrationRequest).filter(RegistrationRequest.id == request_id).with_for_update().first()
         if not req:
-            raise HTTPException(status_code=404, detail="Registration request not found")
+            raise ResourceNotFoundException("Registration request not found")
 
         # 2. Validate Manager Authorization
         # Site resolution
         site = session.query(Site).filter(Site.id == req.requested_site_id).first()
         if not site:
-            raise HTTPException(status_code=400, detail="Requested site is invalid")
+            raise ResourceNotFoundException("Requested site is invalid")
             
         req_company_id = req.requested_company_id or site.company_id
         if admin.company_id and req_company_id != admin.company_id:
-            raise HTTPException(status_code=403, detail="Unauthorized to approve for this company")
+            raise AuthorizationException("Unauthorized to approve for this company")
 
         # 3. Validate Request Status
         if req.status not in [RegistrationStatus.PENDING, RegistrationStatus.UNDER_REVIEW]:
-            raise HTTPException(status_code=400, detail=f"Request is already {req.status.value}")
+            raise StateTransitionException(f"Request is already {req.status.value}")
 
         # 4. Duplicate Detection (Final safeguard before user creation)
         phone = req.phone_number
@@ -125,7 +125,7 @@ class ApprovalService:
                 or_(User.phone_number == phone, User.email == email)
             )
         if user_query.first():
-            raise HTTPException(status_code=400, detail="A User with this phone or email already exists")
+            raise ConflictException("A User with this phone or email already exists")
 
         # 5. Extract Payload and Create User
         payload = req.payload or {}

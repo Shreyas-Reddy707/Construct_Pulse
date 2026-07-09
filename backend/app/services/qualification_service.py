@@ -1,7 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.models import WorkerQualification, QualificationType, VerificationStatus, User
 from app.schemas.schemas import WorkerQualificationCreate
-from fastapi import HTTPException
 from datetime import datetime, timezone
 
 class QualificationService:
@@ -15,7 +14,8 @@ class QualificationService:
         ).first()
 
         if existing:
-            raise HTTPException(status_code=400, detail="Worker already has an active qualification of this type.")
+            from app.core.exceptions import ConflictException
+            raise ConflictException("Worker already has an active qualification of this type.")
 
         new_qual = WorkerQualification(
             worker_id=worker_id,
@@ -46,7 +46,8 @@ class QualificationService:
             WorkerQualification.is_deleted == False
         ).first()
         if not qual:
-            raise HTTPException(status_code=404, detail="Qualification not found.")
+            from app.core.exceptions import ResourceNotFoundException
+            raise ResourceNotFoundException("Qualification not found.")
         return qual
 
     @classmethod
@@ -69,7 +70,8 @@ class QualificationService:
     def get_compliance_passport(cls, db: Session, worker_id: str):
         worker = db.query(User).filter(User.id == worker_id, User.is_deleted == False).first()
         if not worker:
-            raise HTTPException(status_code=404, detail="Worker not found.")
+            from app.core.exceptions import ResourceNotFoundException
+            raise ResourceNotFoundException("Worker not found.")
             
         from app.services.worker_readiness_service import WorkerReadinessService
         readiness = WorkerReadinessService.evaluate(worker)

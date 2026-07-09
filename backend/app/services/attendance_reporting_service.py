@@ -3,12 +3,27 @@ from datetime import datetime, timezone
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy import func, asc, desc
 
-from app.models.models import Attendance, User, Site, AttendanceCorrectionLog
+from app.models.models import Attendance, User, Site, AttendanceCorrectionLog, UserRole
 import uuid
 from app.schemas.schemas import AttendanceReportQuery, AttendanceReportRow, AttendanceReportResponse, ReportMetadata
 
 class AttendanceReportingService:
     ALLOWED_SORT_FIELDS = ["check_in_time", "check_out_time", "status"]
+
+    @classmethod
+    def _enforce_tenant_isolation(cls, current_user: User, query: AttendanceReportQuery) -> AttendanceReportQuery:
+        """
+        Enforces authorization isolation based on the user's role.
+        """
+        if current_user.role == UserRole.WORKER:
+            query.worker_id = current_user.id
+            query.company_id = current_user.company_id
+        elif current_user.role == UserRole.SITE_MANAGER:
+            query.company_id = current_user.company_id
+        else:
+            if current_user.company_id:
+                query.company_id = current_user.company_id
+        return query
 
     @classmethod
     def _build_query(cls, session: Session, query_params: AttendanceReportQuery):
@@ -79,11 +94,13 @@ class AttendanceReportingService:
     def get_report(
         cls, 
         session: Session, 
-        query_params: AttendanceReportQuery
+        query_params: AttendanceReportQuery,
+        current_user: User
     ) -> AttendanceReportResponse:
         """
         Executes a paginated reporting query and returns a standardized response.
         """
+        query_params = cls._enforce_tenant_isolation(current_user, query_params)
         query = cls._build_query(session, query_params)
         
         # Count total records matching filters (before pagination)
@@ -116,12 +133,14 @@ class AttendanceReportingService:
     def get_export_generator(
         cls, 
         session: Session, 
-        query_params: AttendanceReportQuery
+        query_params: AttendanceReportQuery,
+        current_user: User
     ) -> Generator[Tuple, None, None]:
         """
         Yields raw tuples for CSV streaming. Does not paginate.
         """
         # Remove pagination limits for export
+        query_params = cls._enforce_tenant_isolation(current_user, query_params)
         query = cls._build_query(session, query_params)
         
         # Stream results using yield_per to avoid loading everything into memory
