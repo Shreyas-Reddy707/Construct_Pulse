@@ -18,12 +18,8 @@ class SiteReadinessService:
         ready = cls.is_ready(site, session)
         if site.status == SiteStatus.DRAFT and ready:
             site.status = SiteStatus.CONFIGURED
-            session.commit()
-            session.refresh(site)
         elif site.status == SiteStatus.CONFIGURED and not ready:
             site.status = SiteStatus.DRAFT
-            session.commit()
-            session.refresh(site)
 
     @classmethod
     def is_ready(cls, site: Site, session: Session) -> bool:

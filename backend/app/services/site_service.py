@@ -36,6 +36,7 @@ class SiteService:
             site_data["company_id"] = current_user.company_id
         site = Site(**site_data)
         db.add(site)
+        db.commit()
         return site
 
     @classmethod
@@ -44,8 +45,9 @@ class SiteService:
         update_data = site_in.model_dump(exclude_unset=True)
         for key, value in update_data.items():
             setattr(site, key, value)
-        db.refresh(site)
         SiteReadinessService.update_lifecycle_state(site, db)
+        db.commit()
+        db.refresh(site)
         return site
 
     @classmethod
@@ -54,6 +56,7 @@ class SiteService:
         site.is_deleted = True
         site.deleted_at = datetime.now(timezone.utc)
         site.status = SiteStatus.ARCHIVED
+        db.commit()
 
     @classmethod
     def activate_site(cls, db: Session, site_id: str, current_user: User) -> Site:
@@ -71,6 +74,7 @@ class SiteService:
         site.status = SiteStatus.ACTIVE
         site.activated_by = current_user.id
         site.activated_at = datetime.now(timezone.utc)
+        db.commit()
         db.refresh(site)
         return site
 
@@ -83,6 +87,7 @@ class SiteService:
         site.status = SiteStatus.SUSPENDED
         if request and request.reason:
             site.suspension_reason = request.reason
+        db.commit()
         db.refresh(site)
         return site
 
@@ -111,7 +116,9 @@ class SiteService:
             raise ValidationException("Only Worker accounts may be assigned to sites")
             
         site.assigned_workers.append(user)
+        db.flush()
         SiteReadinessService.update_lifecycle_state(site, db)
+        db.commit()
 
     @classmethod
     def unassign_worker(cls, db: Session, site_id: str, worker_id: str, current_user: User) -> None:
@@ -121,7 +128,9 @@ class SiteService:
             raise ResourceNotFoundException("Worker not assigned to this site")
             
         site.assigned_workers.remove(user)
+        db.flush()
         SiteReadinessService.update_lifecycle_state(site, db)
+        db.commit()
 
     @classmethod
     def assign_department(cls, db: Session, site_id: str, current_user: User, assignment: schemas.SiteAssignment) -> None:
@@ -135,6 +144,7 @@ class SiteService:
             raise ResourceNotFoundException("Site or Department not found")
             
         site.assigned_departments.append(dept)
+        db.commit()
 
     @classmethod
     def assign_contractor(cls, db: Session, site_id: str, current_user: User, assignment: schemas.SiteAssignment) -> None:
@@ -148,6 +158,7 @@ class SiteService:
             raise ResourceNotFoundException("Site or Contractor not found")
             
         site.assigned_contractors.append(contractor)
+        db.commit()
 
     @classmethod
     def get_assignments(cls, db: Session, site_id: str, current_user: User) -> dict:
@@ -182,8 +193,10 @@ class SiteService:
             expires_at=now_utc + timedelta(days=365)
         )
         db.add(new_qr)
-        db.refresh(new_qr)
+        db.flush()
         SiteReadinessService.update_lifecycle_state(site, db)
+        db.commit()
+        db.refresh(new_qr)
         return new_qr
 
     @classmethod
@@ -202,8 +215,10 @@ class SiteService:
             expires_at=now_utc + timedelta(days=365)
         )
         db.add(new_qr)
-        db.refresh(new_qr)
+        db.flush()
         SiteReadinessService.update_lifecycle_state(site, db)
+        db.commit()
+        db.refresh(new_qr)
         return new_qr
 
     @classmethod

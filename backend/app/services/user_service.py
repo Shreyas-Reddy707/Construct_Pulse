@@ -73,6 +73,7 @@ class UserService:
 
         user.status = status
         user.is_active = is_active
+        db.commit()
         db.refresh(user)
         logger.info(f"Admin {admin.id} changed user {user_id} status to {status.value}")
         return user
