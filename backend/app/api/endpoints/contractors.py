@@ -9,9 +9,14 @@ from app.services.contractor_service import ContractorService
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.ContractorResponse])
-def read_contractors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return ContractorService.get_contractors(db, current_user, skip, limit)
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.ContractorResponse])
+def read_contractors(
+    query: schemas.ContractorQuery = Depends(), 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    items, total = ContractorService.get_contractors(db, current_user, query)
+    return schemas.PaginatedResponse.create(data=items, total_records=total, skip=query.skip, limit=query.limit)
 
 @router.post("/", response_model=schemas.ContractorResponse)
 def create_contractor(

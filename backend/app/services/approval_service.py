@@ -15,25 +15,52 @@ from app.services.identity_mapper import IdentityMapper
 from app.core.exceptions import ResourceNotFoundException, StateTransitionException, ConflictException, AuthorizationException
 
 class ApprovalService:
-    """
-    ApprovalService manages the lifecycle of RegistrationRequests, transforming them into Users.
-    """
+    SEARCH_FIELDS = [RegistrationRequest.worker_first_name, RegistrationRequest.worker_last_name, RegistrationRequest.worker_email]
+    SORTABLE_FIELDS = {
+        "name": RegistrationRequest.worker_last_name,
+        "email": RegistrationRequest.worker_email,
+        "status": RegistrationRequest.status,
+        "created_at": RegistrationRequest.created_at,
+    }
 
     @classmethod
-    def fetch_pending_requests(cls, session: Session, company_id: str):
+    def fetch_pending_requests(cls, session: Session, company_id: str, query):
         """
-        Fetch pending or under review registration requests for a specific company.
+        Fetch registration requests securely scoped to the company.
         """
+        from app.services.query_helper import apply_search, apply_sort
+        
         # Sites belonging to this company
         site_subquery = session.query(Site.id).filter(Site.company_id == company_id).subquery()
         
-        return session.query(RegistrationRequest).filter(
+        db_query = session.query(RegistrationRequest).filter(
             or_(
                 RegistrationRequest.requested_company_id == company_id,
                 RegistrationRequest.requested_site_id.in_(site_subquery)
-            ),
-            RegistrationRequest.status.in_([RegistrationStatus.PENDING, RegistrationStatus.UNDER_REVIEW])
-        ).all()
+            )
+        )
+        
+        # Filtering - FORCE queue states (Issue 2 Remediation)
+        db_query = db_query.filter(RegistrationRequest.status.in_([RegistrationStatus.PENDING, RegistrationStatus.UNDER_REVIEW]))
+            
+        # Searching
+        db_query = apply_search(db_query, query.search, cls.SEARCH_FIELDS)
+        
+        # Count BEFORE Sort (Issue 1 Remediation)
+        total_count = db_query.count()
+        
+        # Sorting
+        db_query = apply_sort(
+            db_query, 
+            query.sort_by, 
+            query.sort_order, 
+            cls.SORTABLE_FIELDS, 
+            default_sort_field="created_at",
+            default_sort_order="desc"
+        )
+        
+        items = db_query.offset(query.skip).limit(query.limit).all()
+        return items, total_count
 
     @classmethod
     def get_request(cls, session: Session, request_id: str, company_id: str) -> RegistrationRequest:

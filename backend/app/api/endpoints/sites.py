@@ -9,9 +9,14 @@ from app.services.site_service import SiteService
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.SiteResponse])
-def read_sites(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return SiteService.get_sites(db, current_user, skip, limit)
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.SiteResponse])
+def read_sites(
+    query: schemas.SiteQuery = Depends(), 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    items, total = SiteService.get_sites(db, current_user, query)
+    return schemas.PaginatedResponse.create(data=items, total_records=total, skip=query.skip, limit=query.limit)
 
 @router.post("/", response_model=schemas.SiteResponse)
 def create_site(site_in: schemas.SiteCreate, db: Session = Depends(get_db), current_user: User = Depends(PermissionChecker("site.create"))):

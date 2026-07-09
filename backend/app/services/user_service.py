@@ -7,13 +7,53 @@ import logging
 logger = logging.getLogger(__name__)
 
 class UserService:
+    SEARCH_FIELDS = [User.first_name, User.last_name, User.email]
+    SORTABLE_FIELDS = {
+        "name": User.last_name,
+        "email": User.email,
+        "status": User.status,
+        "role": User.role,
+        "created_at": User.created_at,
+    }
+
     @classmethod
-    def get_users(cls, db: Session, tenant, status: Optional[WorkerStatus], skip: int = 0, limit: int = 100) -> List[User]:
-        query = db.query(User).filter(User.role == UserRole.WORKER)
-        query = query.filter(User.company_id == tenant.id)
-        if status:
-            query = query.filter(User.status == status)
-        return query.offset(skip).limit(limit).all()
+    def get_users(cls, db: Session, tenant, query) -> tuple[List[User], int]:
+        from app.services.query_helper import apply_search, apply_sort
+        
+        db_query = db.query(User).filter(User.role == UserRole.WORKER)
+        db_query = db_query.filter(User.company_id == tenant.id)
+        
+        # Filtering
+        if query.status:
+            db_query = db_query.filter(User.status == query.status)
+        if query.role:
+            db_query = db_query.filter(User.role == query.role)
+        if query.department_id:
+            db_query = db_query.filter(User.department_id == query.department_id)
+        if query.contractor_id:
+            db_query = db_query.filter(User.contractor_id == query.contractor_id)
+        # Assuming worker_to_site relationship handles site assignment
+        if query.site_id:
+            db_query = db_query.filter(User.assigned_sites.any(Site.id == query.site_id))
+            
+        # Searching
+        db_query = apply_search(db_query, query.search, cls.SEARCH_FIELDS)
+        
+        # Count BEFORE Sort
+        total_count = db_query.count()
+        
+        # Sorting
+        db_query = apply_sort(
+            db_query, 
+            query.sort_by, 
+            query.sort_order, 
+            cls.SORTABLE_FIELDS, 
+            default_sort_field="created_at",
+            default_sort_order="desc"
+        )
+        
+        items = db_query.offset(query.skip).limit(query.limit).all()
+        return items, total_count
 
     @classmethod
     def get_user(cls, db: Session, user_id: str, current_user: User) -> User:

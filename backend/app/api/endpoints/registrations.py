@@ -10,16 +10,18 @@ from app.services.approval_service import ApprovalService
 
 router = APIRouter()
 
-@router.get("/pending", response_model=List[schemas.RegistrationRequestResponse])
+@router.get("/pending", response_model=schemas.PaginatedResponse[schemas.RegistrationRequestResponse])
 def get_pending_registrations(
+    query: schemas.RegistrationQuery = Depends(),
     db: Session = Depends(get_db),
     current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SITE_MANAGER])),
     tenant = Depends(get_current_tenant)
 ):
     """
-    Get all pending registration requests for the manager's company.
+    Get registration requests for the manager's company.
     """
-    return ApprovalService.fetch_pending_requests(db, tenant.id)
+    items, total = ApprovalService.fetch_pending_requests(db, tenant.id, query)
+    return schemas.PaginatedResponse.create(data=items, total_records=total, skip=query.skip, limit=query.limit)
 
 @router.get("/{request_id}", response_model=schemas.RegistrationRequestResponse)
 def get_registration(

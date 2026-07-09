@@ -9,9 +9,14 @@ from app.services.department_service import DepartmentService
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.DepartmentResponse])
-def read_departments(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return DepartmentService.get_departments(db, current_user, skip, limit)
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.DepartmentResponse])
+def read_departments(
+    query: schemas.DepartmentQuery = Depends(), 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    items, total = DepartmentService.get_departments(db, current_user, query)
+    return schemas.PaginatedResponse.create(data=items, total_records=total, skip=query.skip, limit=query.limit)
 
 @router.post("/", response_model=schemas.DepartmentResponse)
 def create_department(

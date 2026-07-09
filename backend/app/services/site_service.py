@@ -10,14 +10,43 @@ import math
 from typing import List
 
 class SiteService:
+    SEARCH_FIELDS = [Site.name, Site.city, Site.state]
+    SORTABLE_FIELDS = {
+        "name": Site.name,
+        "city": Site.city,
+        "status": Site.status,
+        "created_at": Site.created_at,
+    }
+
     @classmethod
-    def get_sites(cls, db: Session, current_user: User, skip: int = 0, limit: int = 100) -> List[Site]:
-        query = db.query(Site)
+    def get_sites(cls, db: Session, current_user: User, query) -> tuple[List[Site], int]:
+        from app.services.query_helper import apply_search, apply_sort
+        
+        db_query = db.query(Site)
         if current_user.role == UserRole.WORKER:
-            query = query.filter(Site.assigned_workers.any(User.id == current_user.id))
+            db_query = db_query.filter(Site.assigned_workers.any(User.id == current_user.id))
         elif current_user.company_id:
-            query = query.filter(Site.company_id == current_user.company_id)
-        return query.offset(skip).limit(limit).all()
+            db_query = db_query.filter(Site.company_id == current_user.company_id)
+            
+        if query.status:
+            db_query = db_query.filter(Site.status == query.status)
+            
+        db_query = apply_search(db_query, query.search, cls.SEARCH_FIELDS)
+        
+        # Count BEFORE Sort
+        total_count = db_query.count()
+        
+        db_query = apply_sort(
+            db_query, 
+            query.sort_by, 
+            query.sort_order, 
+            cls.SORTABLE_FIELDS, 
+            default_sort_field="name",
+            default_sort_order="asc"
+        )
+        
+        items = db_query.offset(query.skip).limit(query.limit).all()
+        return items, total_count
 
     @classmethod
     def get_site(cls, db: Session, site_id: str, current_user: User, lock: bool = False) -> Site:

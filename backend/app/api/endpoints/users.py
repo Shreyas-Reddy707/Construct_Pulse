@@ -13,16 +13,15 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.UserResponse])
+@router.get("/", response_model=schemas.PaginatedResponse[schemas.UserResponse])
 def read_users(
-    skip: int = 0, 
-    limit: int = 100, 
-    status: WorkerStatus = None,
+    query: schemas.UserQuery = Depends(),
     db: Session = Depends(get_db),
     current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN, UserRole.SUPERVISOR])),
     tenant = Depends(get_current_tenant)
 ):
-    return UserService.get_users(db, tenant, status, skip, limit)
+    items, total = UserService.get_users(db, tenant, query)
+    return schemas.PaginatedResponse.create(data=items, total_records=total, skip=query.skip, limit=query.limit)
 
 
 @router.get("/me", response_model=schemas.UserResponse)

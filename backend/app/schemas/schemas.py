@@ -1,12 +1,91 @@
 from pydantic import BaseModel, Field, root_validator, validator, AnyHttpUrl
-from typing import Optional, List
+from typing import Optional, List, TypeVar, Generic
+import math
+
+try:
+    from pydantic.generics import GenericModel
+    PaginationBase = GenericModel
+except ImportError:
+    PaginationBase = BaseModel
+
+T = TypeVar('T')
+
+class PaginationMetadata(BaseModel):
+    total_records: int
+    skip: int
+    limit: int
+    page_size: int
+    total_pages: int
+    has_next: bool
+    has_previous: bool
+
+class PaginatedResponse(PaginationBase, Generic[T]):
+    data: List[T]
+    metadata: PaginationMetadata
+
+    @classmethod
+    def create(cls, data: List[T], total_records: int, skip: int, limit: int):
+        page_size = len(data)
+        total_pages = math.ceil(total_records / limit) if limit > 0 else 1
+        has_next = (skip + limit) < total_records
+        has_previous = skip > 0
+        return cls(
+            data=data,
+            metadata=PaginationMetadata(
+                total_records=total_records,
+                skip=skip,
+                limit=limit,
+                page_size=page_size,
+                total_pages=total_pages,
+                has_next=has_next,
+                has_previous=has_previous
+            )
+        )
 from datetime import datetime
 from app.models.models import (
     UserRole, AttendanceStatus, WorkerStatus,
     Role, SiteStatus, PlanSource, PlanStatus,
     NotificationPriority, NotificationType,
-    AdjustmentType, PayrollSource, PayrollStatus, ReportStatus, ReportSource, ReportType, AttendanceMethod, GovernanceAction, AttendanceReasonCode, SnapshotSource, MusterSessionStatus, MusterParticipantStatus, MusterParticipantType, IncidentStatus, IncidentSeverity, ParticipantRole, EvidenceType, IncidentSource, VisitorVisitStatus, VisitSource, ObservationType, ObservationStatus, CorrectiveActionStatus, RiskSeverity, ObservationSource, CorrectiveActionSource, CommunicationStatus, CommunicationSource, RecipientStatus, NotificationSource, ConfigCategory, ConfigurationStatus, ConfigurationSource
+    AdjustmentType, PayrollSource, PayrollStatus, ReportStatus, ReportSource, ReportType, AttendanceMethod, GovernanceAction, AttendanceReasonCode, SnapshotSource, MusterSessionStatus, MusterParticipantStatus, MusterParticipantType, IncidentStatus, IncidentSeverity, ParticipantRole, EvidenceType, IncidentSource, VisitorVisitStatus, VisitSource, ObservationType, ObservationStatus, CorrectiveActionStatus, RiskSeverity, ObservationSource, CorrectiveActionSource, CommunicationStatus, CommunicationSource, RecipientStatus, NotificationSource, ConfigCategory, ConfigurationStatus, ConfigurationSource, RegistrationStatus
 )
+
+class BaseQuery(BaseModel):
+    search: Optional[str] = None
+    sort_by: Optional[str] = None
+    sort_order: Optional[str] = None
+    skip: int = 0
+    limit: int = 100
+
+    @validator('limit')
+    def limit_max_1000(cls, v):
+        if v > 1000:
+            raise ValueError("limit must not exceed 1000")
+        return v
+
+    @validator('sort_order')
+    def sort_order_valid(cls, v):
+        if v and v.lower() not in ['asc', 'desc']:
+            raise ValueError("sort_order must be asc or desc")
+        return v.lower() if v else None
+
+class UserQuery(BaseQuery):
+    status: Optional[WorkerStatus] = None
+    role: Optional[UserRole] = None
+    department_id: Optional[str] = None
+    contractor_id: Optional[str] = None
+    site_id: Optional[str] = None
+
+class SiteQuery(BaseQuery):
+    status: Optional[SiteStatus] = None
+
+class DepartmentQuery(BaseQuery):
+    pass
+
+class ContractorQuery(BaseQuery):
+    pass
+
+class RegistrationQuery(BaseQuery):
+    status: Optional[RegistrationStatus] = None
 
 class Token(BaseModel):
     access_token: str
