@@ -29,7 +29,6 @@ def create_site(site_in: schemas.SiteCreate, db: Session = Depends(get_db), curr
         site_data["company_id"] = current_user.company_id
     site = Site(**site_data)
     db.add(site)
-    db.commit()
     db.refresh(site)
     return site
 
@@ -56,7 +55,6 @@ def update_site(site_id: str, site_in: schemas.SiteUpdate, db: Session = Depends
     for key, value in update_data.items():
         setattr(site, key, value)
     
-    db.commit()
     db.refresh(site)
     SiteReadinessService.update_lifecycle_state(site, db)
     return site
@@ -72,7 +70,6 @@ def delete_site(site_id: str, db: Session = Depends(get_db), current_user: User 
     site.is_deleted = True
     site.deleted_at = datetime.now(timezone.utc)
     site.status = SiteStatus.ARCHIVED
-    db.commit()
     return {"ok": True}
 
 @router.post("/{site_id}/activate")
@@ -95,7 +92,6 @@ def activate_site(site_id: str, db: Session = Depends(get_db), current_user: Use
     site.status = SiteStatus.ACTIVE
     site.activated_by = current_user.id
     site.activated_at = datetime.now(timezone.utc)
-    db.commit()
     db.refresh(site)
     return site
 
@@ -114,7 +110,6 @@ def suspend_site(site_id: str, request: schemas.SiteSuspendRequest, db: Session 
     site.status = SiteStatus.SUSPENDED
     if request and request.reason:
         site.suspension_reason = request.reason
-    db.commit()
     db.refresh(site)
     return site
 
@@ -148,7 +143,6 @@ def assign_worker(site_id: str, assignment: schemas.SiteAssignment, db: Session 
     if user.role != UserRole.WORKER:
         raise HTTPException(status_code=400, detail="Only Worker accounts may be assigned to sites")
     site.assigned_workers.append(user)
-    db.commit()
     SiteReadinessService.update_lifecycle_state(site, db)
     return {"message": "Worker assigned successfully"}
 
@@ -167,7 +161,6 @@ def unassign_worker(site_id: str, worker_id: str, db: Session = Depends(get_db),
         raise HTTPException(status_code=404, detail="Worker not assigned to this site")
         
     site.assigned_workers.remove(user)
-    db.commit()
     SiteReadinessService.update_lifecycle_state(site, db)
     return {"message": "Worker unassigned successfully"}
 
@@ -185,7 +178,6 @@ def assign_department(site_id: str, assignment: schemas.SiteAssignment, db: Sess
     if not site or not dept:
         raise HTTPException(status_code=404, detail="Site or Department not found")
     site.assigned_departments.append(dept)
-    db.commit()
     return {"message": "Department assigned successfully"}
 
 @router.post("/{site_id}/assign-contractor")
@@ -202,7 +194,6 @@ def assign_contractor(site_id: str, assignment: schemas.SiteAssignment, db: Sess
     if not site or not contractor:
         raise HTTPException(status_code=404, detail="Site or Contractor not found")
     site.assigned_contractors.append(contractor)
-    db.commit()
     return {"message": "Contractor assigned successfully"}
 
 @router.get("/{site_id}/assignments", response_model=schemas.SiteAssignmentsResponse)
@@ -254,7 +245,6 @@ def generate_qr(site_id: str, db: Session = Depends(get_db), current_user: User 
         expires_at=now_utc + timedelta(days=365)
     )
     db.add(new_qr)
-    db.commit()
     db.refresh(new_qr)
     SiteReadinessService.update_lifecycle_state(site, db)
     return new_qr
@@ -283,7 +273,6 @@ def refresh_qr(site_id: str, db: Session = Depends(get_db), current_user: User =
         expires_at=now_utc + timedelta(days=365)
     )
     db.add(new_qr)
-    db.commit()
     db.refresh(new_qr)
     SiteReadinessService.update_lifecycle_state(site, db)
     return new_qr

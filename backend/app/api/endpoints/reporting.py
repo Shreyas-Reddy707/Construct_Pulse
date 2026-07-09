@@ -31,7 +31,6 @@ def generate_report(
         )
         return report
     except Exception as e:
-        db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/{report_id}/archive", response_model=ComplianceReportResponse)
@@ -52,7 +51,6 @@ def archive_report(
         )
         return report
     except ValueError as e:
-        db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("", response_model=List[ComplianceReportResponse])

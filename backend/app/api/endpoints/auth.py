@@ -42,7 +42,6 @@ def login(login_data: schemas.FirebaseLogin, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.phone_number == phone_number).first()
         if user:
             user.firebase_uid = firebase_uid
-            db.commit()
 
     if not user:
         raise HTTPException(status_code=404, detail="User not registered")
@@ -68,7 +67,6 @@ def login(login_data: schemas.FirebaseLogin, db: Session = Depends(get_db)):
         last_activity=datetime.utcnow()
     )
     db.add(new_session)
-    db.commit()
 
     claims = {
         "company_id": user.company_id,
@@ -120,7 +118,6 @@ def register_worker(request: RegisterWorkerRequest, db: Session = Depends(get_db
         emergency_contact_phone=request.emergency_contact_phone
     )
     db.add(new_user)
-    db.commit()
     db.refresh(new_user)
     
     import uuid
@@ -135,7 +132,6 @@ def register_worker(request: RegisterWorkerRequest, db: Session = Depends(get_db
         last_activity=datetime.utcnow()
     )
     db.add(new_session)
-    db.commit()
 
     claims = {
         "company_id": new_user.company_id,

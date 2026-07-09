@@ -27,6 +27,5 @@ def create_contractor(
         contractor_data["company_id"] = current_user.company_id
     contractor = Contractor(**contractor_data)
     db.add(contractor)
-    db.commit()
     db.refresh(contractor)
     return contractor

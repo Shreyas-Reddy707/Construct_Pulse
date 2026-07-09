@@ -26,7 +26,6 @@ def draft_configuration(
             payload=payload
         )
     except Exception as e:
-        db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.post("/{version_id}/approve", response_model=ConfigurationResponse)
@@ -44,10 +43,8 @@ def approve_configuration(
             payload=payload
         )
     except ValueError as ve:
-        db.rollback()
         raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
-        db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("", response_model=List[ConfigurationResponse])

@@ -130,7 +130,6 @@ def acknowledge_site_induction(
         )
         db.add(record)
 
-    db.commit()
     db.refresh(record)
 
     return record

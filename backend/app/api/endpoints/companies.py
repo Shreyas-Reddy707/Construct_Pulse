@@ -62,14 +62,11 @@ def create_company(
         )
         db.add(default_dept)
         
-        db.commit()
         db.refresh(company)
         return company
     except HTTPException:
-        db.rollback()
         raise
     except Exception as e:
-        db.rollback()
         import logging
         logging.getLogger(__name__).error(f"Failed to provision tenant: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to provision tenant")
@@ -101,7 +98,6 @@ def assign_company_admin(
     target_user.status = "approved"
     target_user.is_active = True
     
-    db.commit()
     db.refresh(target_user)
     
     import logging

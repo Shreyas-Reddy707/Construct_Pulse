@@ -27,6 +27,5 @@ def create_department(
         dept_data["company_id"] = current_user.company_id
     department = Department(**dept_data)
     db.add(department)
-    db.commit()
     db.refresh(department)
     return department

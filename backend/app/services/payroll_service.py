@@ -17,6 +17,8 @@ from app.schemas.schemas import (
 from app.services.attendance_reporting_service import AttendanceReportingService
 
 class PayrollService:
+    # TODO: WS1-P3B - Payroll batching requires a dedicated future engineering pack.
+    # Transaction behavior left unmodified for now.
     """
     Public Service Contract:
     PayrollService is the exclusive public interface for the Payroll Foundation.
