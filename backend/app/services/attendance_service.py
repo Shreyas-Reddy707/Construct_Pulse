@@ -180,10 +180,10 @@ class AttendanceService:
             attendance.check_in_time = check_in_time
             
         if check_out_time:
-            # If providing a check_out_time to an active attendance, we don't automatically
-            # change the status. Administrative checkout should be used for that.
-            # But if it's a correction on a completed attendance, we just update the time.
             attendance.check_out_time = check_out_time
+            if attendance.status == AttendanceStatus.CHECKED_IN:
+                attendance.status = AttendanceStatus.CHECKED_OUT
+                attendance.check_out_method = AttendanceMethod.ADMIN_OVERRIDE
 
         if check_in_time or check_out_time:
             attendance.attendance_version += 1

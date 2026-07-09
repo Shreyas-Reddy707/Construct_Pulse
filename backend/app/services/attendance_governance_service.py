@@ -8,6 +8,30 @@ from app.services.attendance_service import AttendanceService
 
 class AttendanceGovernanceService:
     @classmethod
+    def _get_attendance_for_tenant(
+        cls,
+        session: Session,
+        attendance_id: str,
+        current_user: User,
+        lock: bool = False
+    ) -> Attendance:
+        from app.models.models import UserRole
+        query = session.query(Attendance).filter(Attendance.id == attendance_id)
+        
+        if current_user.company_id and current_user.role != UserRole.SYSTEM_ADMIN:
+            query = query.filter(Attendance.company_id == current_user.company_id)
+            
+        if lock:
+            query = query.with_for_update()
+            
+        attendance = query.first()
+        if not attendance:
+            from app.core.exceptions import ResourceNotFoundException
+            raise ResourceNotFoundException("Attendance record not found.")
+            
+        return attendance
+
+    @classmethod
     def _create_audit_log(
         cls,
         session: Session,
@@ -50,10 +74,7 @@ class AttendanceGovernanceService:
         """
         Executes a manual checkout on behalf of a worker.
         """
-        attendance = session.query(Attendance).filter(Attendance.id == attendance_id).first()
-        if not attendance:
-            from app.core.exceptions import ResourceNotFoundException, StateTransitionException, ValidationException
-            raise ResourceNotFoundException("Attendance record not found.")
+        attendance = cls._get_attendance_for_tenant(session, attendance_id, performed_by, lock=True)
             
         if attendance.status != AttendanceStatus.CHECKED_IN:
             from app.core.exceptions import StateTransitionException
@@ -110,10 +131,7 @@ class AttendanceGovernanceService:
         Corrects timestamps on an attendance record.
         Completed attendances must never transition back to CHECKED_IN.
         """
-        attendance = session.query(Attendance).filter(Attendance.id == attendance_id).first()
-        if not attendance:
-            from app.core.exceptions import ResourceNotFoundException, ValidationException
-            raise ResourceNotFoundException("Attendance record not found.")
+        attendance = cls._get_attendance_for_tenant(session, attendance_id, performed_by, lock=True)
             
         if not new_check_in_time and not new_check_out_time:
             from app.core.exceptions import ValidationException
@@ -185,10 +203,7 @@ class AttendanceGovernanceService:
         """
         Returns the immutable audit history of an attendance record.
         """
-        attendance = session.query(Attendance).filter(Attendance.id == attendance_id).first()
-        if not attendance:
-            from app.core.exceptions import ResourceNotFoundException
-            raise ResourceNotFoundException("Attendance record not found.")
+        attendance = cls._get_attendance_for_tenant(session, attendance_id, performed_by, lock=False)
             
         logs = session.query(AttendanceCorrectionLog)\
             .filter(AttendanceCorrectionLog.attendance_id == attendance_id)\
