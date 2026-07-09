@@ -85,7 +85,8 @@ class EmergencyMusterService:
             db, 
             site_id=create_dto.site_id, 
             captured_by=current_user_id, 
-            source=SnapshotSource.SYSTEM
+            source=SnapshotSource.SYSTEM,
+            commit=False
         )
         new_session.occupancy_snapshot_id = snapshot_dto.snapshot_id
 

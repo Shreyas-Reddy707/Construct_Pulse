@@ -62,8 +62,7 @@ class OccupancyService:
     def _get_base_filters(query: OccupancyQuery) -> List[Any]:
         filters = [
             Attendance.status == AttendanceStatus.CHECKED_IN,
-            Attendance.check_out_time.is_(None),
-            Attendance.check_in_time >= datetime.now(timezone.utc) - timedelta(hours=24)
+            Attendance.check_out_time.is_(None)
         ]
         if query.site_id:
             filters.append(Attendance.site_id == query.site_id)
@@ -174,8 +173,7 @@ class OccupancyService:
             Contractor, User.contractor_id == Contractor.id
         ).filter(
             Attendance.status == AttendanceStatus.CHECKED_IN,
-            Attendance.check_out_time.is_(None),
-            Attendance.check_in_time >= datetime.now(timezone.utc) - timedelta(hours=24)
+            Attendance.check_out_time.is_(None)
         )
 
         if query.site_id:
@@ -224,7 +222,8 @@ class OccupancyService:
         session: Session, 
         site_id: str, 
         current_user: User,
-        source: SnapshotSource = SnapshotSource.MANUAL
+        source: SnapshotSource = SnapshotSource.MANUAL,
+        commit: bool = True
     ) -> OccupancySnapshotResponse:
         """
         Calculates current occupancy and explicitly stores a snapshot.
@@ -249,8 +248,11 @@ class OccupancyService:
         )
         
         session.add(snapshot)
-        session.commit()
-        session.refresh(snapshot)
+        if commit:
+            session.commit()
+            session.refresh(snapshot)
+        else:
+            session.flush()
         
         return cls._map_snapshot_to_dto(snapshot)
 
