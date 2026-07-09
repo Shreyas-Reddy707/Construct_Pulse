@@ -6,6 +6,64 @@ from app.core.logging import get_logger
 
 logger = get_logger("constructpulse.exceptions")
 
+
+# ─── Domain Exceptions ────────────────────────────────────────────────────────
+
+class DomainException(Exception):
+    """
+    Base class for all domain-level business exceptions.
+    These exceptions should be caught by the API layer and translated 
+    into appropriate HTTP responses.
+    """
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+
+class ValidationException(DomainException):
+    """Raised when domain entity validation fails."""
+    def __init__(self, message: str = "Validation failed"):
+        super().__init__(message)
+
+
+class ResourceNotFoundException(DomainException):
+    """Raised when a requested domain entity does not exist."""
+    def __init__(self, message: str = "Resource not found"):
+        super().__init__(message)
+
+
+class ConflictException(DomainException):
+    """Raised when an operation conflicts with the current domain state."""
+    def __init__(self, message: str = "Resource conflict"):
+        super().__init__(message)
+
+
+class AuthorizationException(DomainException):
+    """Raised when a user is not authorized to perform an action on a domain entity."""
+    def __init__(self, message: str = "Not authorized"):
+        super().__init__(message)
+
+
+class TenantIsolationException(DomainException):
+    """Raised when an operation attempts to cross tenant boundaries."""
+    def __init__(self, message: str = "Tenant isolation violation"):
+        super().__init__(message)
+
+
+class StateTransitionException(DomainException):
+    """Raised when an invalid state transition is attempted on a domain entity."""
+    def __init__(self, message: str = "Invalid state transition"):
+        super().__init__(message)
+
+
+class BusinessRuleViolation(DomainException):
+    """Raised when a specific business rule is violated."""
+    def __init__(self, message: str = "Business rule violation"):
+        super().__init__(message)
+
+
+# ─── Exception Handlers ───────────────────────────────────────────────────────
+
 def setup_exception_handlers(app: FastAPI) -> None:
     
     @app.exception_handler(StarletteHTTPException)
