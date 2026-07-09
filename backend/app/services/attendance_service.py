@@ -24,6 +24,17 @@ class AttendanceService:
     MAX_DECISION_AGE_SECONDS = 30  # Configurable maximum age for decision freshness
 
     @classmethod
+    def _get_worker_lock(cls, session: Session, user_id: str, lock: bool = False) -> User:
+        query = session.query(User).filter(User.id == user_id)
+        if lock:
+            query = query.with_for_update()
+        user = query.first()
+        if not user:
+            from app.core.exceptions import ResourceNotFoundException
+            raise ResourceNotFoundException("Worker not found.")
+        return user
+
+    @classmethod
     def check_in(
         cls,
         session: Session,
@@ -32,6 +43,18 @@ class AttendanceService:
         gps_latitude: Optional[float] = None,
         gps_longitude: Optional[float] = None
     ) -> Attendance:
+        # 0. Acquire lock to serialize check-in attempts and prevent duplicate shifts
+        cls._get_worker_lock(session, user.id, lock=True)
+        
+        active_attendance = session.query(Attendance).filter(
+            Attendance.user_id == user.id,
+            Attendance.status == AttendanceStatus.CHECKED_IN
+        ).first()
+        
+        if active_attendance:
+            from app.core.exceptions import ConflictException
+            raise ConflictException(f"Worker is already checked in to a site (Site ID: {active_attendance.site_id}).")
+
         # 1. Access Verification (Orchestration)
         decision = AccessVerificationService.evaluate(
             session=session,
@@ -94,12 +117,12 @@ class AttendanceService:
         user: User,
         site_id: str
     ) -> Attendance:
-        # 1. Locate active attendance
+        # 1. Locate active attendance with lock to serialize concurrent checkouts
         attendance = session.query(Attendance).filter(
             Attendance.user_id == user.id,
             Attendance.site_id == site_id,
             Attendance.status == AttendanceStatus.CHECKED_IN
-        ).first()
+        ).with_for_update().first()
         
         if not attendance:
             raise ResourceNotFoundException("Active check-in not found for this site.")
