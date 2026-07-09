@@ -70,85 +70,69 @@ class OccupancyService:
         return filters
 
     @classmethod
-    def _department_breakdown(cls, session: Session, query: OccupancyQuery, base_filters: List[Any]) -> List[DepartmentOccupancy]:
-        dept_q = session.query(
-            Department.id.label('department_id'),
-            Department.name.label('department_name'),
-            func.count(Attendance.id).label('worker_count')
-        ).join(
-            User, User.department_id == Department.id
-        ).join(
-            Attendance, Attendance.user_id == User.id
-        ).filter(*base_filters).group_by(Department.id)
-
-        if not query.include_visitors:
-            dept_q = dept_q.filter(User.identity_type != IdentityType.VISITOR)
-
-        return [
-            DepartmentOccupancy(department_id=row.department_id, department_name=row.department_name, worker_count=row.worker_count)
-            for row in dept_q.all()
-        ]
-
-    @classmethod
-    def _contractor_breakdown(cls, session: Session, query: OccupancyQuery, base_filters: List[Any]) -> List[ContractorOccupancy]:
-        cont_q = session.query(
-            Contractor.id.label('contractor_id'),
-            Contractor.name.label('contractor_name'),
-            func.count(Attendance.id).label('worker_count')
-        ).join(
-            User, User.contractor_id == Contractor.id
-        ).join(
-            Attendance, Attendance.user_id == User.id
-        ).filter(*base_filters).group_by(Contractor.id)
-
-        if not query.include_visitors:
-            cont_q = cont_q.filter(User.identity_type != IdentityType.VISITOR)
-
-        return [
-            ContractorOccupancy(contractor_id=row.contractor_id, contractor_name=row.contractor_name, worker_count=row.worker_count)
-            for row in cont_q.all()
-        ]
-
-    @classmethod
-    def _visitor_breakdown(cls, session: Session, base_filters: List[Any]) -> VisitorOccupancy:
-        vis_q = session.query(func.count(Attendance.id)).join(User).filter(
-            *base_filters,
-            User.identity_type == IdentityType.VISITOR
-        )
-        visitor_count = vis_q.scalar() or 0
-        return VisitorOccupancy(visitor_count=visitor_count)
-
-    @classmethod
     def get_dashboard(cls, session: Session, query: OccupancyQuery, current_user: User) -> OccupancyDashboard:
         """
         Aggregates multiple occupancy metrics into a single dashboard projection.
-        Performs aggregations entirely in SQL.
+        Performs aggregations in Python from a single atomic database query to guarantee consistency.
         """
         query = cls._enforce_tenant_isolation(session, current_user, query)
         base_filters = cls._get_base_filters(query)
         
-        # Total Occupancy and Breakdowns
-        total_q = session.query(func.count(Attendance.id)).join(User).filter(*base_filters)
+        q = session.query(
+            User.identity_type,
+            Department.id.label('department_id'),
+            Department.name.label('department_name'),
+            Contractor.id.label('contractor_id'),
+            Contractor.name.label('contractor_name')
+        ).join(
+            User, Attendance.user_id == User.id
+        ).outerjoin(
+            Department, User.department_id == Department.id
+        ).outerjoin(
+            Contractor, User.contractor_id == Contractor.id
+        ).filter(*base_filters)
+
         if not query.include_visitors:
-            total_q = total_q.filter(User.identity_type != IdentityType.VISITOR)
-        total_present = total_q.scalar() or 0
+            q = q.filter(User.identity_type != IdentityType.VISITOR)
 
-        workers_q = session.query(func.count(Attendance.id)).join(User).filter(
-            *base_filters,
-            User.identity_type == IdentityType.WORKER
-        )
-        active_workers = workers_q.scalar() or 0
+        # Single atomic fetch guarantees mathematical consistency
+        rows = q.all()
+        
+        total_present = len(rows)
+        active_workers = 0
+        active_visitors = 0
+        active_contractors = 0
+        
+        dept_counts = {}
+        cont_counts = {}
 
-        contractors_q = session.query(func.count(Attendance.id)).join(User).filter(
-            *base_filters,
-            User.identity_type == IdentityType.CONTRACTOR_REPRESENTATIVE
-        )
-        active_contractors = contractors_q.scalar() or 0
+        for row in rows:
+            if row.identity_type == IdentityType.WORKER:
+                active_workers += 1
+            elif row.identity_type == IdentityType.VISITOR:
+                active_visitors += 1
+            elif row.identity_type == IdentityType.CONTRACTOR_REPRESENTATIVE:
+                active_contractors += 1
 
-        dept_breakdown = cls._department_breakdown(session, query, base_filters)
-        cont_breakdown = cls._contractor_breakdown(session, query, base_filters)
-        visitor_breakdown = cls._visitor_breakdown(session, base_filters)
-        active_visitors = visitor_breakdown.visitor_count
+            if row.department_id:
+                if row.department_id not in dept_counts:
+                    dept_counts[row.department_id] = {'name': row.department_name, 'count': 0}
+                dept_counts[row.department_id]['count'] += 1
+
+            if row.contractor_id:
+                if row.contractor_id not in cont_counts:
+                    cont_counts[row.contractor_id] = {'name': row.contractor_name, 'count': 0}
+                cont_counts[row.contractor_id]['count'] += 1
+
+        dept_breakdown = [
+            DepartmentOccupancy(department_id=d_id, department_name=d_data['name'], worker_count=d_data['count'])
+            for d_id, d_data in dept_counts.items()
+        ]
+        cont_breakdown = [
+            ContractorOccupancy(contractor_id=c_id, contractor_name=c_data['name'], worker_count=c_data['count'])
+            for c_id, c_data in cont_counts.items()
+        ]
+        visitor_breakdown = VisitorOccupancy(visitor_count=active_visitors)
 
         summary = OccupancySummary(
             total_present=total_present,
