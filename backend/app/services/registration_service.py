@@ -21,28 +21,27 @@ class RegistrationService:
     def detect_duplicates(cls, db: Session, phone_number: str, email: str = None) -> None:
         """
         Detects duplicates across existing RegistrationRequests and Users.
+        Email is metadata only and not enforced for uniqueness against the User model.
         """
         from app.core.exceptions import ConflictException
         # Check Users (Active identities)
-        # Any existing User with this phone or email blocks a new registration request.
+        # We lock the user row to prevent race conditions during concurrent approval/registration
         existing_user = db.query(User).filter(
-            or_(User.phone_number == phone_number, User.email == email)
-        ).first()
+            User.phone_number == phone_number
+        ).with_for_update().first()
+        
         if existing_user:
-            raise ConflictException("A user with this phone number or email already exists.")
+            raise ConflictException("A user with this phone number already exists.")
 
         # Check RegistrationRequests (In-flight applications)
-        # Active registrations (PENDING, UNDER_REVIEW, APPROVED) prevent duplicates.
-        # Terminal registrations (REJECTED, WITHDRAWN) do not permanently block future applications.
+        # Active registrations (PENDING, UNDER_REVIEW) prevent duplicates.
         existing_req = db.query(RegistrationRequest).filter(
-            or_(
-                RegistrationRequest.phone_number == phone_number,
-                RegistrationRequest.email == email
-            ),
+            RegistrationRequest.phone_number == phone_number,
             RegistrationRequest.status.in_([RegistrationStatus.PENDING, RegistrationStatus.UNDER_REVIEW])
-        ).first()
+        ).with_for_update().first()
+        
         if existing_req:
-            raise ConflictException("An active registration request with this phone number or email already exists.")
+            raise ConflictException("An active registration request with this phone number already exists.")
 
     @classmethod
     def _generate_registration_number(cls, session: Session) -> str:

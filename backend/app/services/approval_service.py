@@ -56,9 +56,20 @@ class ApprovalService:
     @classmethod
     def move_to_under_review(cls, session: Session, request_id: str, admin: User) -> RegistrationRequest:
         """
-        Move a request to UNDER_REVIEW status.
+        Move a request to UNDER_REVIEW status atomically.
         """
-        req = cls.get_request(session, request_id, admin.company_id)
+        site_subquery = session.query(Site.id).filter(Site.company_id == admin.company_id).subquery()
+        req = session.query(RegistrationRequest).filter(
+            RegistrationRequest.id == request_id,
+            or_(
+                RegistrationRequest.requested_company_id == admin.company_id,
+                RegistrationRequest.requested_site_id.in_(site_subquery)
+            )
+        ).with_for_update().first()
+        
+        if not req:
+            raise ResourceNotFoundException("Registration request not found or access denied")
+            
         if req.status != RegistrationStatus.PENDING:
             raise StateTransitionException("Only PENDING requests can be moved to UNDER_REVIEW")
             
@@ -118,14 +129,9 @@ class ApprovalService:
 
         # 4. Duplicate Detection (Final safeguard before user creation)
         phone = req.phone_number
-        email = req.email
         user_query = session.query(User).filter(User.phone_number == phone)
-        if email:
-            user_query = session.query(User).filter(
-                or_(User.phone_number == phone, User.email == email)
-            )
         if user_query.first():
-            raise ConflictException("A User with this phone or email already exists")
+            raise ConflictException("A User with this phone number already exists")
 
         # 5. Extract Payload and Create User
         payload = req.payload or {}
@@ -133,7 +139,6 @@ class ApprovalService:
         new_user = User(
             name=req.full_name,
             phone_number=req.phone_number,
-            email=req.email,
             role=IdentityMapper.get_role(req.identity_type),
             company_id=req_company_id,
             department_id=payload.get("department_id"),
