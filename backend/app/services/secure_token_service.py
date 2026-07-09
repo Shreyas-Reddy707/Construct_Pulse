@@ -24,38 +24,25 @@ class SecureTokenService:
         lifetime_seconds: Optional[int] = None
     ) -> SiteQRCode:
         """
-        Atomically publishes a new token generation for the given site.
-        This handles:
-        1. Locking the site's token generation to prevent race conditions.
-        2. Generating a secure opaque token.
-        3. Deactivating the previous generation.
-        4. Activating the new generation.
+        Atomically publishes a new token for the given site.
+        Expires all previously generated active tokens for this site.
         """
         now_utc = datetime.now(timezone.utc)
         lifetime = lifetime_seconds if lifetime_seconds is not None else settings.SECURE_TOKEN_LIFETIME_SECONDS
         
-        # Concurrency Safety: Lock the latest generation record using with_for_update()
-        # This prevents duplicate generations if multiple admins publish simultaneously.
-        max_gen_record = session.query(SiteQRCode).filter(
+        # Concurrency Safety: Lock the latest record to prevent concurrent duplicate generations
+        session.query(SiteQRCode).filter(
             SiteQRCode.site_id == site.id
-        ).order_by(
-            SiteQRCode.generation.desc()
         ).with_for_update().first()
         
-        latest_generation = max_gen_record.generation if max_gen_record else 0
-        new_generation = latest_generation + 1
-
-        # Deactivate all previously active tokens for this site
+        # Force early expiration of all unexpired tokens for this site
         active_tokens = session.query(SiteQRCode).filter(
             SiteQRCode.site_id == site.id,
-            SiteQRCode.is_active == True
+            SiteQRCode.expires_at > now_utc
         ).all()
         
         for token in active_tokens:
-            token.is_active = False
-            if token.expires_at and token.expires_at.replace(tzinfo=timezone.utc) > now_utc:
-                # Force early expiration
-                token.expires_at = now_utc
+            token.expires_at = now_utc
 
         # Cryptographically secure, unpredictable, and opaque token
         new_token_str = secrets.token_urlsafe(32)
@@ -63,11 +50,7 @@ class SecureTokenService:
         new_qr = SiteQRCode(
             site_id=site.id,
             qr_token=new_token_str,
-            generation=new_generation,
-            issued_at=now_utc,
-            expires_at=now_utc + timedelta(seconds=lifetime),
-            is_active=True,
-            created_by=created_by
+            expires_at=now_utc + timedelta(seconds=lifetime)
         )
         
         session.add(new_qr)
@@ -98,7 +81,7 @@ class SecureTokenService:
     ) -> SiteQRCode:
         """
         Compatibility wrapper for publish_generation. 
-        Calling this rotates the current active token to a new generation.
+        Calling this rotates the current active token to a new one.
         """
         return cls.publish_generation(session, site, created_by)
 
@@ -114,32 +97,43 @@ class SecureTokenService:
         return None
 
     @classmethod
-    def validate_token(cls, session: Session, token: str) -> str:
+    def validate_token(cls, session: Session, token: str) -> Site:
         """
-        Validates the token, cleanly distinguishing between REVOKED, EXPIRED, INVALID, and VALID.
+        Validates the token.
         Includes support for the SECURE_TOKEN_GRACE_SECONDS configuration.
+        Raises DomainException on failure.
         """
+        from app.core.exceptions import ValidationException, ResourceNotFoundException
+        from app.models.models import SiteStatus
+        
         qr = session.query(SiteQRCode).filter(SiteQRCode.qr_token == token).first()
         if not qr:
-            return "INVALID"
-            
-        if qr.revoked_at is not None:
-            return "REVOKED"
+            raise ValidationException("Registration token is invalid.")
             
         now_utc = datetime.now(timezone.utc)
-        expires_at = qr.expires_at.replace(tzinfo=timezone.utc) if qr.expires_at.tzinfo is None else qr.expires_at
         
-        # Consider the grace window for expiration
-        if expires_at + timedelta(seconds=settings.SECURE_TOKEN_GRACE_SECONDS) < now_utc:
-            return "EXPIRED"
+        if qr.expires_at:
+            expires_at = qr.expires_at.replace(tzinfo=timezone.utc) if qr.expires_at.tzinfo is None else qr.expires_at
+            # Consider the grace window for expiration
+            if expires_at + timedelta(seconds=settings.SECURE_TOKEN_GRACE_SECONDS) < now_utc:
+                raise ValidationException("Registration token has expired.")
             
-        # Even if is_active is False (e.g. it was just rotated), we allow it if it is within the grace window
-        return "VALID"
+        site = qr.site
+        if not site:
+            raise ResourceNotFoundException("Site could not be resolved from token.")
+            
+        if site.is_deleted or site.status != SiteStatus.ACTIVE.value:
+            raise ValidationException("Site is no longer active.")
+            
+        if site.company and site.company.is_deleted:
+            raise ValidationException("Company is no longer active.")
+            
+        return site
 
     @classmethod
     def expire_token(cls, session: Session, token: str) -> bool:
         """
-        Forces a token to immediately expire without revoking it.
+        Forces a token to immediately expire.
         """
         qr = session.query(SiteQRCode).filter(SiteQRCode.qr_token == token).first()
         if not qr:
@@ -147,7 +141,6 @@ class SecureTokenService:
             
         now_utc = datetime.now(timezone.utc)
         qr.expires_at = now_utc
-        qr.is_active = False
         session.commit()
         return True
 
@@ -155,15 +148,6 @@ class SecureTokenService:
     def revoke_token(cls, session: Session, token: str) -> bool:
         """
         Immediately and permanently revokes a token (e.g. for administrative reasons).
-        Revoked tokens bypass the grace window.
+        Revocation is achieved by forcing expiration.
         """
-        qr = session.query(SiteQRCode).filter(SiteQRCode.qr_token == token).first()
-        if not qr:
-            return False
-            
-        now_utc = datetime.now(timezone.utc)
-        qr.revoked_at = now_utc
-        qr.is_active = False
-        qr.expires_at = now_utc
-        session.commit()
-        return True
+        return cls.expire_token(session, token)

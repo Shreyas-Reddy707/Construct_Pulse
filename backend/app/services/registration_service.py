@@ -11,17 +11,10 @@ class RegistrationService:
 
     @classmethod
     def validate_token(cls, db: Session, token: str) -> Site:
-        from app.core.exceptions import ValidationException, ResourceNotFoundException
-        site = db.query(Site).filter(Site.registration_token == token).first()
-        if not site:
-            raise ValidationException("Invalid or inactive registration token.")
-            
-        if not site.is_active:
-            raise ValidationException("Invalid or inactive registration token.")
-            
-        if not site.company_id:
-            raise ResourceNotFoundException("Site could not be resolved from token.")
-            
+        """
+        Validates the registration token securely by delegating to SecureTokenService.
+        """
+        site = SecureTokenService.validate_token(db, token)
         return site
 
     @classmethod
