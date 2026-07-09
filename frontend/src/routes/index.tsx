@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { AuthGuard } from "./AuthGuard";
 import { LoginPage } from "@/modules/auth/pages/LoginPage";
 import { DashboardPage } from "@/modules/dashboard/pages/DashboardPage";
+import { WorkerDirectoryPage } from "@/modules/workers/pages/WorkerDirectoryPage";
 
 export const router = createBrowserRouter([
   {
@@ -26,6 +27,10 @@ export const router = createBrowserRouter([
           {
             index: true,
             element: <DashboardPage />,
+          },
+          {
+            path: "workers",
+            element: <WorkerDirectoryPage />,
           },
           // Future protected routes go here
         ],
