@@ -22,6 +22,7 @@ class AttendanceMethodResolver:
 
 class AttendanceService:
     MAX_DECISION_AGE_SECONDS = 30  # Configurable maximum age for decision freshness
+    MAX_SHIFT_HOURS = 14.0  # Cap active shifts at 14 hours to prevent zombie shift inflation
 
     @classmethod
     def _get_worker_lock(cls, session: Session, user_id: str, lock: bool = False) -> User:
@@ -218,6 +219,7 @@ class AttendanceService:
             Attendance.user_id == user.id,
             or_(
                 Attendance.check_in_time >= today_start,
+                Attendance.check_out_time >= today_start,
                 Attendance.check_out_time.is_(None)
             )
         ).order_by(Attendance.check_in_time.asc()).all()
@@ -225,8 +227,19 @@ class AttendanceService:
         hours_today = 0.0
         for a in all_today:
             out_time = a.check_out_time or datetime.now(timezone.utc)
-            duration = (out_time - a.check_in_time).total_seconds() / 3600.0
-            hours_today += duration
+            duration_seconds = (out_time - a.check_in_time).total_seconds()
+            
+            # Guard against negative durations (e.g. from bad time corrections)
+            if duration_seconds < 0:
+                duration_seconds = 0.0
+                
+            duration_hours = duration_seconds / 3600.0
+            
+            # Zombie shift protection for active shifts
+            if a.check_out_time is None:
+                duration_hours = min(duration_hours, cls.MAX_SHIFT_HOURS)
+                
+            hours_today += duration_hours
             
         latest_att = all_today[-1] if all_today else None
         
