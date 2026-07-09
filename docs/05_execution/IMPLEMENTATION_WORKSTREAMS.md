@@ -10,7 +10,7 @@ This document establishes the strategic implementation plan for ConstructPulse. 
 
 **Engineering Decisions Included:**
 - **EDR-001:** Service Layer Refactoring (Moving business logic out of API routers).
-- **EDR-003:** Transaction Boundaries & Unit of Work (Removing service-level commits).
+- **EDR-003:** Transaction Boundaries & Unit of Work (Centralizing session lifecycle and standardizing service-level commits).
 - **EDR-010:** Architectural Boundary Enforcement (Eliminating cross-domain implicit imports).
 - **EDR-021:** Exception Handling Standardization (Replacing opaque `ValueError` swallowing with strongly-typed API exceptions).
 
@@ -21,7 +21,8 @@ This document establishes the strategic implementation plan for ConstructPulse. 
 
 **Expected Deliverables:** 
 - A standardized `Unit of Work` pattern utilizing FastAPI dependencies.
-- Pure service layers devoid of SQLAlchemy `commit()` calls.
+- Pure router layers devoid of explicit `commit()` and `rollback()` calls.
+- Services that act as the sole owners of business transactions, with at most one commit per operation.
 - A global exception handler intercepting typed business exceptions.
 - Strict enforcement of the Feature-First architectural directory structure.
 

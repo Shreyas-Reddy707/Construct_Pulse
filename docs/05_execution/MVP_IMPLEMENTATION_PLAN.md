@@ -27,7 +27,7 @@ Implementation is organized into five strict, sequential phases corresponding di
 
 ### Phase 1: Backend Foundation
 - **Purpose:** Stabilize backend transaction boundaries and exception handling.
-- **Goals:** Eliminate service-layer commits and cross-domain implicit imports.
+- **Goals:** Eliminate router-layer commits, enforce exactly one commit per service operation, and eliminate cross-domain implicit imports.
 - **Workstreams:** Workstream 1 (Backend Foundation).
 - **Milestones:** Milestone 1 (Backend Foundation Complete).
 - **Expected Deliverables:** Centralized Unit of Work, pure service layers, and typed API exceptions.
@@ -94,7 +94,7 @@ The implementation phase will be governed by strict version control policies:
 
 At the conclusion of each engineering phase, progression to the next phase requires validation:
 
-- **Manual Engineering Verification:** Lead engineers must review the architecture against the phase's expected deliverables (e.g., manually verifying that no `.commit()` calls exist outside the router dependencies).
+- **Manual Engineering Verification:** Lead engineers must review the architecture against the phase's expected deliverables (e.g., manually verifying that no `.commit()` calls exist in routers, and services execute at most one commit).
 - **Regression Testing:** Core test suites must pass 100% to ensure the new foundation did not break existing authentication or data retrieval flows.
 - **Integration Testing:** At Phase 5, the team will perform end-to-end integration testing to ensure the entire critical path (Login -> Site Selection -> Check-In) functions correctly across the refactored architecture.
 - *(Note: Granular unit test plans are out of scope for this document; validation relies on systemic stability checks).*

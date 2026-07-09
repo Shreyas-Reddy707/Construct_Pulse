@@ -80,6 +80,44 @@ def setup_exception_handlers(app: FastAPI) -> None:
             },
         )
         
+    @app.exception_handler(DomainException)
+    async def domain_exception_handler(request: Request, exc: DomainException) -> JSONResponse:
+        request_id = getattr(request.state, "request_id", None)
+        
+        # Map domain exceptions to appropriate HTTP status codes
+        status_code = 400
+        if isinstance(exc, ValidationException):
+            status_code = 400
+        elif isinstance(exc, ResourceNotFoundException):
+            status_code = 404
+        elif isinstance(exc, (AuthorizationException, TenantIsolationException)):
+            status_code = 403
+        elif isinstance(exc, (ConflictException, StateTransitionException)):
+            status_code = 409
+        elif isinstance(exc, BusinessRuleViolation):
+            status_code = 422
+            
+        # Log client errors at INFO level rather than ERROR
+        logger.info(f"Domain exception [{exc.__class__.__name__}]: {exc.message} [request_id={request_id}]")
+        
+        # Preserve existing API response envelope
+        # To strictly mimic `raise HTTPException(status_code=status_code, detail=exc.message)`
+        # we return {"detail": exc.message} since that is what the frontend expects from standard routers,
+        # but the global handler already wraps HTTPExceptions in an `error` envelope.
+        # However, to be safest and minimize frontend impact (since routers currently just raise HTTPException without getting intercepted by StarletteHTTPException if the frontend expects detail, wait - StarletteHTTPException IS caught).
+        # We will match the existing StarletteHTTPException envelope structure.
+        return JSONResponse(
+            status_code=status_code,
+            content={
+                "error": {
+                    "code": status_code,
+                    "message": exc.message,
+                    "request_id": request_id
+                },
+                "detail": exc.message # Include detail to ensure 100% backward compatibility with standard FastAPI clients
+            },
+        )
+        
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
         request_id = getattr(request.state, "request_id", None)

@@ -18,7 +18,7 @@ This document establishes measurable, outcome-driven milestones for the Construc
 - EDR-021: Exception Handling Standardization
 
 **Definition of Done:**
-- All `db.commit()` calls have been removed from the service and repository layers and centralized in dependency-injected Unit of Work managers.
+- All `db.commit()` and `db.rollback()` calls have been removed from the router layer. Services now own business transactions and perform at most ONE explicit commit per operation.
 - All cross-domain module imports have been refactored to use explicit feature boundaries.
 - The global exception handler intercepts and formats all custom typed exceptions.
 
