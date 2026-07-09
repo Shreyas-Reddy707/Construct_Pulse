@@ -42,16 +42,17 @@ class AttendanceService:
         )
         
         if not decision.allowed:
-            raise ValueError(decision.reasons[0].message if decision.reasons else "Access denied.")
+            from app.core.exceptions import ValidationException, ResourceNotFoundException, StateTransitionException
+            raise ValidationException(decision.reasons[0].message if decision.reasons else "Access denied.")
             
         # 2. Access Decision Freshness Validation
         if (datetime.now(timezone.utc) - decision.evaluated_at).total_seconds() > cls.MAX_DECISION_AGE_SECONDS:
-            raise ValueError("ACCESS_DECISION_EXPIRED: The access decision is no longer fresh.")
+            raise ValidationException("ACCESS_DECISION_EXPIRED: The access decision is no longer fresh.")
             
         # The site was successfully resolved during Access Verification.
         site = SecureTokenService.resolve_site(session, qr_token)
         if not site:
-            raise ValueError("Site could not be resolved.")
+            raise ResourceNotFoundException("Site could not be resolved.")
 
         # 3. Resolve Attendance Method
         method = AttendanceMethodResolver.resolve(decision, qr_token)
@@ -101,7 +102,7 @@ class AttendanceService:
         ).first()
         
         if not attendance:
-            raise ValueError("Active check-in not found for this site.")
+            raise ResourceNotFoundException("Active check-in not found for this site.")
             
         # 2. Complete attendance
         attendance.check_out_time = datetime.now(timezone.utc)
@@ -127,7 +128,7 @@ class AttendanceService:
         Mutates the attendance status to CHECKED_OUT and sets check_out_method.
         """
         if attendance.status != AttendanceStatus.CHECKED_IN:
-            raise ValueError("Attendance is already completed.")
+            raise StateTransitionException("Attendance is already completed.")
             
         attendance.check_out_time = check_out_time or datetime.now(timezone.utc)
         attendance.status = AttendanceStatus.CHECKED_OUT

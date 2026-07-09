@@ -52,10 +52,12 @@ class AttendanceGovernanceService:
         """
         attendance = session.query(Attendance).filter(Attendance.id == attendance_id).first()
         if not attendance:
-            raise ValueError("Attendance record not found.")
+            from app.core.exceptions import ResourceNotFoundException, StateTransitionException, ValidationException
+            raise ResourceNotFoundException("Attendance record not found.")
             
         if attendance.status != AttendanceStatus.CHECKED_IN:
-            raise ValueError("Can only perform administrative checkout on active attendances.")
+            from app.core.exceptions import StateTransitionException
+            raise StateTransitionException("Can only perform administrative checkout on active attendances.")
             
         # Record old value
         old_status = attendance.status.value
@@ -110,10 +112,12 @@ class AttendanceGovernanceService:
         """
         attendance = session.query(Attendance).filter(Attendance.id == attendance_id).first()
         if not attendance:
-            raise ValueError("Attendance record not found.")
-
+            from app.core.exceptions import ResourceNotFoundException, ValidationException
+            raise ResourceNotFoundException("Attendance record not found.")
+            
         if not new_check_in_time and not new_check_out_time:
-            raise ValueError("Must provide at least one time to correct.")
+            from app.core.exceptions import ValidationException
+            raise ValidationException("Must provide at least one time to correct.")
 
         old_check_in = attendance.check_in_time.isoformat() if attendance.check_in_time else None
         old_check_out = attendance.check_out_time.isoformat() if attendance.check_out_time else None
@@ -183,7 +187,8 @@ class AttendanceGovernanceService:
         """
         attendance = session.query(Attendance).filter(Attendance.id == attendance_id).first()
         if not attendance:
-            raise ValueError("Attendance record not found.")
+            from app.core.exceptions import ResourceNotFoundException
+            raise ResourceNotFoundException("Attendance record not found.")
             
         logs = session.query(AttendanceCorrectionLog)\
             .filter(AttendanceCorrectionLog.attendance_id == attendance_id)\

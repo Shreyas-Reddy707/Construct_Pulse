@@ -75,10 +75,13 @@ class SafetyCommunicationService:
 
     @classmethod
     def create_draft(cls, db: Session, company_id: str, current_user_id: str, payload: CommunicationCreate) -> CommunicationResponse:
+        from app.core.exceptions import ResourceNotFoundException, ValidationException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         if payload.site_id:
             site = db.query(Site).filter(Site.id == payload.site_id, Site.company_id == company_id).first()
             if not site:
-                raise ValueError("Site not found")
+                raise ResourceNotFoundException("Site not found")
 
         # Architectural Documentation: Sequence generation is database-driven to ensure gapless, atomic sequence numbers even under concurrent load.
         comm_number = cls._generate_communication_number(db)
@@ -116,12 +119,15 @@ class SafetyCommunicationService:
 
     @classmethod
     def publish(cls, db: Session, company_id: str, communication_id: str, current_user_id: str, reason: str) -> CommunicationResponse:
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         communication = db.query(SafetyCommunication).filter(SafetyCommunication.id == communication_id, SafetyCommunication.company_id == company_id).first()
         if not communication:
-            raise ValueError("Communication not found")
+            raise ResourceNotFoundException("Communication not found")
 
         if communication.status != CommunicationStatus.DRAFT:
-            raise ValueError("Only DRAFT communications can be published")
+            raise StateTransitionException("Only DRAFT communications can be published")
 
         # Lifecycle Documentation: PUBLISHED
         # Published communications are made visible to the workforce.
@@ -151,12 +157,15 @@ class SafetyCommunicationService:
 
     @classmethod
     def archive(cls, db: Session, company_id: str, communication_id: str, current_user_id: str, reason: str) -> CommunicationResponse:
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         communication = db.query(SafetyCommunication).filter(SafetyCommunication.id == communication_id, SafetyCommunication.company_id == company_id).first()
         if not communication:
-            raise ValueError("Communication not found")
+            raise ResourceNotFoundException("Communication not found")
 
         if communication.status != CommunicationStatus.PUBLISHED:
-            raise ValueError("Only PUBLISHED communications can be archived")
+            raise StateTransitionException("Only PUBLISHED communications can be archived")
 
         # Lifecycle Documentation: ARCHIVED
         # Archived exists to retire a communication from active dashboards while maintaining its historical record.
@@ -185,15 +194,18 @@ class SafetyCommunicationService:
 
     @classmethod
     def acknowledge(cls, db: Session, company_id: str, communication_id: str, current_user_id: str) -> CommunicationResponse:
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException, ValidationException, ConflictException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         communication = db.query(SafetyCommunication).filter(SafetyCommunication.id == communication_id, SafetyCommunication.company_id == company_id).first()
         if not communication:
-            raise ValueError("Communication not found")
+            raise ResourceNotFoundException("Communication not found")
 
         if communication.status != CommunicationStatus.PUBLISHED:
-            raise ValueError("Can only acknowledge PUBLISHED communications")
+            raise StateTransitionException("Can only acknowledge PUBLISHED communications")
             
         if not communication.requires_acknowledgement:
-            raise ValueError("This communication does not require acknowledgement")
+            raise ValidationException("This communication does not require acknowledgement")
 
         existing_ack = db.query(CommunicationAcknowledgement).filter(
             CommunicationAcknowledgement.communication_id == communication.id,
@@ -201,7 +213,7 @@ class SafetyCommunicationService:
         ).first()
 
         if existing_ack:
-            raise ValueError("User has already acknowledged this communication")
+            raise ConflictException("User has already acknowledged this communication")
 
         ack = CommunicationAcknowledgement(
             communication_id=communication.id,

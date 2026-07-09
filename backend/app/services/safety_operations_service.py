@@ -90,14 +90,18 @@ class SafetyOperationsService:
 
     @classmethod
     def create_observation(cls, db: Session, company_id: str, current_user_id: str, payload: SafetyObservationCreate) -> SafetyObservationResponse:
+        from app.core.exceptions import ResourceNotFoundException, ValidationException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
+        # Validate site
         site = db.query(Site).filter(Site.id == payload.site_id, Site.company_id == company_id).first()
         if not site:
-            raise ValueError("Site not found")
+            raise ResourceNotFoundException("Site not found")
 
         if payload.assigned_to:
             assignee = db.query(User).filter(User.id == payload.assigned_to, User.company_id == company_id).first()
             if not assignee:
-                raise ValueError("Assignee not found")
+                raise ResourceNotFoundException("Assignee not found")
 
         obs_number = cls._generate_observation_number(db)
         
@@ -135,16 +139,19 @@ class SafetyOperationsService:
 
     @classmethod
     def assign_corrective_action(cls, db: Session, company_id: str, observation_id: str, current_user_id: str, payload: CorrectiveActionCreate) -> SafetyObservationResponse:
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         observation = db.query(SafetyObservation).filter(SafetyObservation.id == observation_id, SafetyObservation.company_id == company_id).first()
         if not observation:
-            raise ValueError("Observation not found")
+            raise ResourceNotFoundException("Observation not found")
         
         if observation.observation_status in [ObservationStatus.CLOSED, ObservationStatus.CANCELLED]:
-            raise ValueError("Cannot assign action to closed or cancelled observation")
+            raise StateTransitionException("Cannot assign action to closed or cancelled observation")
 
         assignee = db.query(User).filter(User.id == payload.assigned_to, User.company_id == company_id).first()
         if not assignee:
-            raise ValueError("Assignee not found")
+            raise ResourceNotFoundException("Assignee not found")
 
         action = CorrectiveAction(
             observation_id=observation.id,
@@ -179,21 +186,24 @@ class SafetyOperationsService:
         return cls._map_observation_to_dto(observation)
 
     @classmethod
-    def update_observation_status(cls, db: Session, company_id: str, observation_id: str, current_user_id: str, status: ObservationStatus, reason: str) -> SafetyObservationResponse:
+    def update_observation_status(cls, db: Session, company_id: str, observation_id: str, current_user_id: str, new_status: ObservationStatus, reason: Optional[str] = None) -> SafetyObservationResponse:
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException, ValidationException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         observation = db.query(SafetyObservation).filter(SafetyObservation.id == observation_id, SafetyObservation.company_id == company_id).first()
         if not observation:
-            raise ValueError("Observation not found")
+            raise ResourceNotFoundException("Observation not found")
         
         if observation.observation_status in [ObservationStatus.CLOSED, ObservationStatus.CANCELLED]:
-            raise ValueError("Cannot update status of closed or cancelled observation")
+            raise StateTransitionException("Cannot update status of closed or cancelled observation")
 
-        if status == ObservationStatus.CLOSED:
-            raise ValueError("Use close_observation to close an observation")
-        if status == ObservationStatus.VERIFIED:
-            raise ValueError("Use verify_observation to verify an observation")
+        if new_status == ObservationStatus.CLOSED:
+            raise ValidationException("Use close_observation to close an observation")
+        if new_status == ObservationStatus.VERIFIED:
+            raise ValidationException("Use verify_observation to verify an observation")
 
         old_status = observation.observation_status
-        observation.observation_status = status
+        observation.observation_status = new_status
         observation.observation_version += 1
 
         audit_batch_id = str(uuid.uuid4())
@@ -206,27 +216,30 @@ class SafetyOperationsService:
             old_status=old_status,
             new_status=observation.observation_status,
             performed_by=current_user_id,
-            reason=reason
+            reason=reason or f"Status updated to {new_status}"
         )
         db.commit()
         db.refresh(observation)
         return cls._map_observation_to_dto(observation)
 
     @classmethod
-    def update_corrective_action_status(cls, db: Session, company_id: str, action_id: str, current_user_id: str, status: CorrectiveActionStatus, reason: str) -> SafetyObservationResponse:
+    def update_corrective_action_status(cls, db: Session, company_id: str, action_id: str, current_user_id: str, new_status: CorrectiveActionStatus, reason: Optional[str] = None) -> SafetyObservationResponse:
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         action = db.query(CorrectiveAction).join(SafetyObservation).filter(
             CorrectiveAction.id == action_id,
             SafetyObservation.company_id == company_id
         ).first()
         if not action:
-            raise ValueError("Corrective action not found")
+            raise ResourceNotFoundException("Corrective action not found")
 
         observation = action.observation
         if observation.observation_status in [ObservationStatus.CLOSED, ObservationStatus.CANCELLED]:
-            raise ValueError("Cannot update action for a closed or cancelled observation")
+            raise StateTransitionException("Cannot update action for a closed or cancelled observation")
 
-        action.action_status = status
-        if status == CorrectiveActionStatus.COMPLETED:
+        action.action_status = new_status
+        if new_status == CorrectiveActionStatus.COMPLETED:
             action.completed_at = datetime.now(timezone.utc)
         action.corrective_action_version += 1
 
@@ -242,25 +255,28 @@ class SafetyOperationsService:
             old_status=observation.observation_status,
             new_status=observation.observation_status,
             performed_by=current_user_id,
-            reason=f"Corrective action status updated to {status.value}: {reason}"
+            reason=f"Corrective action status updated to {new_status.value}: {reason}"
         )
         db.commit()
         db.refresh(observation)
         return cls._map_observation_to_dto(observation)
 
     @classmethod
-    def verify_observation(cls, db: Session, company_id: str, observation_id: str, current_user_id: str, reason: str) -> SafetyObservationResponse:
+    def verify_observation(cls, db: Session, company_id: str, observation_id: str, current_user_id: str, reason: Optional[str] = None) -> SafetyObservationResponse:
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         observation = db.query(SafetyObservation).filter(SafetyObservation.id == observation_id, SafetyObservation.company_id == company_id).first()
         if not observation:
-            raise ValueError("Observation not found")
+            raise ResourceNotFoundException("Observation not found")
         
         if observation.observation_status in [ObservationStatus.CLOSED, ObservationStatus.CANCELLED]:
-            raise ValueError("Cannot verify closed or cancelled observation")
+            raise StateTransitionException("Cannot verify closed or cancelled observation")
         
         # Ensure all actions are completed or cancelled
         open_actions = [a for a in observation.actions if a.action_status in [CorrectiveActionStatus.OPEN, CorrectiveActionStatus.IN_PROGRESS]]
         if open_actions:
-            raise ValueError("Cannot verify observation with open corrective actions")
+            raise StateTransitionException("Cannot verify observation with open corrective actions")
 
         old_status = observation.observation_status
         observation.observation_status = ObservationStatus.VERIFIED
@@ -285,13 +301,16 @@ class SafetyOperationsService:
         return cls._map_observation_to_dto(observation)
 
     @classmethod
-    def close_observation(cls, db: Session, company_id: str, observation_id: str, current_user_id: str, reason: str) -> SafetyObservationResponse:
+    def close_observation(cls, db: Session, company_id: str, observation_id: str, current_user_id: str, reason: Optional[str] = None) -> SafetyObservationResponse:
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         observation = db.query(SafetyObservation).filter(SafetyObservation.id == observation_id, SafetyObservation.company_id == company_id).first()
         if not observation:
-            raise ValueError("Observation not found")
+            raise ResourceNotFoundException("Observation not found")
 
         if observation.observation_status != ObservationStatus.VERIFIED:
-            raise ValueError("Only VERIFIED observations can be closed")
+            raise StateTransitionException("Only VERIFIED observations can be closed")
 
         old_status = observation.observation_status
         observation.observation_status = ObservationStatus.CLOSED

@@ -1,19 +1,13 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user, PermissionChecker
-from app.models.models import User, UserRole
+from app.models.models import User
 from app.schemas import schemas
 from app.services.safety_communication_service import SafetyCommunicationService
 
 router = APIRouter()
-
-def _enforce_tenant_isolation(current_user: User, resource_company_id: str):
-    if current_user.role == UserRole.SYSTEM_ADMIN:
-        return
-    if not current_user.company_id or current_user.company_id != resource_company_id:
-        raise HTTPException(status_code=403, detail="Tenant isolation violation")
 
 @router.post("", response_model=schemas.CommunicationResponse)
 def create_communication_draft(
@@ -24,11 +18,7 @@ def create_communication_draft(
     """
     Creates a new safety communication draft.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return SafetyCommunicationService.create_draft(db, current_user.company_id, current_user.id, payload)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return SafetyCommunicationService.create_draft(db, current_user.company_id, current_user.id, payload)
 
 @router.post("/{communication_id}/publish", response_model=schemas.CommunicationResponse)
 def publish_communication(
@@ -40,11 +30,7 @@ def publish_communication(
     """
     Publishes a safety communication.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return SafetyCommunicationService.publish(db, current_user.company_id, communication_id, current_user.id, payload.reason)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return SafetyCommunicationService.publish(db, current_user.company_id, communication_id, current_user.id, payload.reason)
 
 @router.post("/{communication_id}/archive", response_model=schemas.CommunicationResponse)
 def archive_communication(
@@ -56,11 +42,7 @@ def archive_communication(
     """
     Archives a safety communication.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return SafetyCommunicationService.archive(db, current_user.company_id, communication_id, current_user.id, payload.reason)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return SafetyCommunicationService.archive(db, current_user.company_id, communication_id, current_user.id, payload.reason)
 
 @router.post("/{communication_id}/acknowledge", response_model=schemas.CommunicationResponse)
 def acknowledge_communication(
@@ -72,12 +54,7 @@ def acknowledge_communication(
     """
     Acknowledges a safety communication.
     """
-    if not current_user.company_id:
-        raise HTTPException(status_code=400, detail="User must belong to a company")
-    try:
-        return SafetyCommunicationService.acknowledge(db, current_user.company_id, communication_id, current_user.id)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return SafetyCommunicationService.acknowledge(db, current_user.company_id, communication_id, current_user.id)
 
 @router.get("", response_model=List[schemas.CommunicationResponse])
 def list_communications(
@@ -90,8 +67,6 @@ def list_communications(
     """
     Lists safety communications.
     """
-    if not current_user.company_id:
-        raise HTTPException(status_code=400, detail="User must belong to a company")
     return SafetyCommunicationService.list_communications(db, current_user.company_id, site_id, skip, limit)
 
 @router.get("/dashboard", response_model=schemas.CommunicationDashboard)
@@ -100,9 +75,8 @@ def get_dashboard(
     current_user: User = Depends(PermissionChecker("communication.manage"))
 ):
     """
-    Gets dashboard summary of safety communications.
+    Gets dashboard summary of communications.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
     return SafetyCommunicationService.dashboard(db, current_user.company_id)
 
 @router.get("/{communication_id}", response_model=schemas.CommunicationResponse)
@@ -114,9 +88,4 @@ def get_communication(
     """
     Gets details of a specific safety communication.
     """
-    if not current_user.company_id:
-        raise HTTPException(status_code=400, detail="User must belong to a company")
-    communication = SafetyCommunicationService.get_communication(db, current_user.company_id, communication_id)
-    if not communication:
-        raise HTTPException(status_code=404, detail="Communication not found")
-    return communication
+    return SafetyCommunicationService.get_communication(db, current_user.company_id, communication_id)

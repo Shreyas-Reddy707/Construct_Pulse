@@ -1,5 +1,5 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user, PermissionChecker
@@ -18,12 +18,7 @@ def create_notification(
     """
     Creates a new notification. Manager access required.
     """
-    if not current_user.company_id:
-        raise HTTPException(status_code=400, detail="User must belong to a company")
-    try:
-        return NotificationService.create_notification(db, current_user.company_id, current_user.id, payload)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return NotificationService.create_notification(db, current_user.company_id, current_user.id, payload)
 
 @router.get("", response_model=List[schemas.NotificationResponse])
 def list_notifications(
@@ -56,10 +51,7 @@ def get_notification(
     """
     Gets details of a specific notification for the recipient.
     """
-    notification = NotificationService.get_notification(db, notification_id, current_user.id)
-    if not notification:
-        raise HTTPException(status_code=404, detail="Notification not found")
-    return notification
+    return NotificationService.get_notification(db, notification_id, current_user.id)
 
 @router.post("/{notification_id}/read", response_model=schemas.NotificationResponse)
 def mark_read(
@@ -71,10 +63,7 @@ def mark_read(
     """
     Marks a notification as READ for the recipient.
     """
-    try:
-        return NotificationService.mark_read(db, notification_id, current_user.id, payload.reason)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return NotificationService.mark_read(db, notification_id, current_user.id, payload.reason)
 
 @router.post("/{notification_id}/archive", response_model=schemas.NotificationResponse)
 def archive_notification(
@@ -86,7 +75,4 @@ def archive_notification(
     """
     Marks a notification as ARCHIVED for the recipient.
     """
-    try:
-        return NotificationService.archive(db, notification_id, current_user.id, payload.reason)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return NotificationService.archive(db, notification_id, current_user.id, payload.reason)

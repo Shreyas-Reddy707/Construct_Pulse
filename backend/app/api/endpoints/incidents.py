@@ -1,19 +1,13 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user, PermissionChecker
-from app.models.models import User, UserRole
+from app.models.models import User
 from app.schemas import schemas
 from app.services.incident_service import IncidentService
 
 router = APIRouter()
-
-def _enforce_tenant_isolation(current_user: User, resource_company_id: str):
-    if current_user.role == UserRole.SYSTEM_ADMIN:
-        return
-    if not current_user.company_id or current_user.company_id != resource_company_id:
-        raise HTTPException(status_code=403, detail="Tenant isolation violation")
 
 @router.post("", response_model=schemas.IncidentResponse)
 def create_incident(
@@ -24,12 +18,7 @@ def create_incident(
     """
     Creates a new incident report. Workers and above can create incidents.
     """
-    if not current_user.company_id:
-        raise HTTPException(status_code=400, detail="User must belong to a company")
-    try:
-        return IncidentService.create_incident(db, current_user.company_id, current_user.id, payload)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return IncidentService.create_incident(db, current_user.company_id, current_user.id, payload)
 
 @router.get("", response_model=List[schemas.IncidentResponse])
 def list_incidents(
@@ -42,7 +31,6 @@ def list_incidents(
     """
     Lists incidents within the tenant.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
     return IncidentService.list_incidents(db, current_user.company_id, site_id, skip, limit)
 
 @router.get("/dashboard", response_model=schemas.IncidentDashboard)
@@ -53,7 +41,6 @@ def get_dashboard(
     """
     Returns incident operational counts.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
     return IncidentService.dashboard(db, current_user.company_id)
 
 @router.get("/{incident_id}", response_model=schemas.IncidentResponse)
@@ -62,11 +49,7 @@ def get_incident(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("safety.view"))
 ):
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    incident = IncidentService.get_incident(db, current_user.company_id, incident_id)
-    if not incident:
-        raise HTTPException(status_code=404, detail="Incident not found")
-    return incident
+    return IncidentService.get_incident(db, current_user.company_id, incident_id)
 
 @router.post("/{incident_id}/assign", response_model=schemas.IncidentResponse)
 def assign_investigator(
@@ -78,11 +61,7 @@ def assign_investigator(
     """
     Assign an investigator to the incident.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return IncidentService.assign_investigator(db, current_user.company_id, incident_id, current_user.id, payload)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return IncidentService.assign_investigator(db, current_user.company_id, incident_id, current_user.id, payload)
 
 @router.post("/{incident_id}/status", response_model=schemas.IncidentResponse)
 def update_status(
@@ -94,11 +73,7 @@ def update_status(
     """
     Update the incident status.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return IncidentService.update_status(db, current_user.company_id, incident_id, current_user.id, payload)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return IncidentService.update_status(db, current_user.company_id, incident_id, current_user.id, payload)
 
 @router.post("/{incident_id}/participants", response_model=schemas.IncidentParticipantResponse)
 def add_participant(
@@ -108,13 +83,9 @@ def add_participant(
     current_user: User = Depends(PermissionChecker("safety.manage"))
 ):
     """
-    Add a participant to the incident.
+    Add a participant (witness, involved party) to an incident.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return IncidentService.add_participant(db, current_user.company_id, incident_id, current_user.id, payload)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return IncidentService.add_participant(db, current_user.company_id, incident_id, current_user.id, payload)
 
 @router.get("/{incident_id}/participants", response_model=List[schemas.IncidentParticipantResponse])
 def get_participants(
@@ -122,11 +93,10 @@ def get_participants(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("safety.view"))
 ):
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return IncidentService.get_participants(db, current_user.company_id, incident_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    """
+    Get participants for an incident.
+    """
+    return IncidentService.get_participants(db, current_user.company_id, incident_id)
 
 @router.post("/{incident_id}/evidence", response_model=schemas.IncidentEvidenceResponse)
 def add_evidence(
@@ -136,13 +106,9 @@ def add_evidence(
     current_user: User = Depends(PermissionChecker("safety.manage"))
 ):
     """
-    Add an evidence record to the incident.
+    Add evidence (photo, document link) to an incident.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return IncidentService.add_evidence(db, current_user.company_id, incident_id, current_user.id, payload)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return IncidentService.add_evidence(db, current_user.company_id, incident_id, current_user.id, payload)
 
 @router.get("/{incident_id}/evidence", response_model=List[schemas.IncidentEvidenceResponse])
 def get_evidence(
@@ -150,8 +116,7 @@ def get_evidence(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("safety.view"))
 ):
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return IncidentService.get_evidence(db, current_user.company_id, incident_id)
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    """
+    Get evidence for an incident.
+    """
+    return IncidentService.get_evidence(db, current_user.company_id, incident_id)

@@ -1,19 +1,13 @@
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, get_current_user, PermissionChecker
-from app.models.models import User, UserRole
+from app.models.models import User
 from app.schemas import schemas
 from app.services.workforce_plan_service import WorkforcePlanService
 
 router = APIRouter()
-
-def _enforce_tenant_isolation(current_user: User, resource_company_id: str):
-    if current_user.role == UserRole.SYSTEM_ADMIN:
-        return
-    if not current_user.company_id or current_user.company_id != resource_company_id:
-        raise HTTPException(status_code=403, detail="Tenant isolation violation")
 
 @router.post("", response_model=schemas.WorkforcePlanResponse)
 def create_plan_draft(
@@ -24,11 +18,7 @@ def create_plan_draft(
     """
     Creates a new workforce plan draft.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return WorkforcePlanService.create_draft(db, current_user.company_id, current_user.id, payload)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return WorkforcePlanService.create_draft(db, current_user.company_id, current_user.id, payload)
 
 @router.post("/{plan_id}/departments", response_model=schemas.WorkforcePlanResponse)
 def set_department_targets(
@@ -40,11 +30,7 @@ def set_department_targets(
     """
     Sets department targets for a draft workforce plan.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return WorkforcePlanService.set_department_targets(db, current_user.company_id, plan_id, current_user.id, targets)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return WorkforcePlanService.set_department_targets(db, current_user.company_id, plan_id, current_user.id, targets)
 
 @router.post("/{plan_id}/contractors", response_model=schemas.WorkforcePlanResponse)
 def set_contractor_targets(
@@ -56,11 +42,7 @@ def set_contractor_targets(
     """
     Sets contractor targets for a draft workforce plan.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return WorkforcePlanService.set_contractor_targets(db, current_user.company_id, plan_id, current_user.id, targets)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return WorkforcePlanService.set_contractor_targets(db, current_user.company_id, plan_id, current_user.id, targets)
 
 @router.post("/{plan_id}/approve", response_model=schemas.WorkforcePlanResponse)
 def approve_plan(
@@ -72,11 +54,7 @@ def approve_plan(
     """
     Approves a workforce plan.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return WorkforcePlanService.approve(db, current_user.company_id, plan_id, current_user.id, payload.reason)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return WorkforcePlanService.approve(db, current_user.company_id, plan_id, current_user.id, payload.reason)
 
 @router.post("/{plan_id}/archive", response_model=schemas.WorkforcePlanResponse)
 def archive_plan(
@@ -88,11 +66,7 @@ def archive_plan(
     """
     Archives a workforce plan.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
-    try:
-        return WorkforcePlanService.archive(db, current_user.company_id, plan_id, current_user.id, payload.reason)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    return WorkforcePlanService.archive(db, current_user.company_id, plan_id, current_user.id, payload.reason)
 
 @router.get("", response_model=List[schemas.WorkforcePlanResponse])
 def list_plans(
@@ -105,8 +79,6 @@ def list_plans(
     """
     Lists workforce plans.
     """
-    if not current_user.company_id:
-        raise HTTPException(status_code=400, detail="User must belong to a company")
     return WorkforcePlanService.list_plans(db, current_user.company_id, site_id, skip, limit)
 
 @router.get("/dashboard", response_model=schemas.PlanningDashboard)
@@ -117,7 +89,6 @@ def get_dashboard(
     """
     Gets dashboard summary of workforce plans.
     """
-    _enforce_tenant_isolation(current_user, current_user.company_id)
     return WorkforcePlanService.dashboard(db, current_user.company_id)
 
 @router.get("/{plan_id}", response_model=schemas.WorkforcePlanResponse)
@@ -129,9 +100,4 @@ def get_plan(
     """
     Gets details of a specific workforce plan.
     """
-    if not current_user.company_id:
-        raise HTTPException(status_code=400, detail="User must belong to a company")
-    plan = WorkforcePlanService.get_plan(db, current_user.company_id, plan_id)
-    if not plan:
-        raise HTTPException(status_code=404, detail="Plan not found")
-    return plan
+    return WorkforcePlanService.get_plan(db, current_user.company_id, plan_id)

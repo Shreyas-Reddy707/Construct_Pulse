@@ -61,20 +61,23 @@ class VisitorService:
 
     @classmethod
     def register_visit(cls, db: Session, company_id: str, current_user_id: str, payload: VisitorVisitCreate) -> VisitorVisitResponse:
+        from app.core.exceptions import ResourceNotFoundException, ValidationException, StateTransitionException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         # Validate site
         site = db.query(Site).filter(Site.id == payload.site_id, Site.company_id == company_id).first()
         if not site:
-            raise ValueError("Site not found")
+            raise ResourceNotFoundException("Site not found")
 
         # Validate visitor identity exists and is a VISITOR type
         visitor = db.query(User).filter(User.id == payload.visitor_id, User.company_id == company_id, User.identity_type == IdentityType.VISITOR).first()
         if not visitor:
-            raise ValueError("Invalid visitor identity")
+            raise ValidationException("Invalid visitor identity")
 
         # Validate host
         host = db.query(User).filter(User.id == payload.host_id, User.company_id == company_id).first()
         if not host:
-            raise ValueError("Invalid host identity")
+            raise ValidationException("Invalid host identity")
 
         visit_number = cls._generate_visit_number(db)
         visit_source = payload.visit_source if payload.visit_source == VisitSource.SELF_SERVICE else VisitSource.HOST
@@ -115,11 +118,12 @@ class VisitorService:
     @classmethod
     def approve_visit(cls, db: Session, company_id: str, visit_id: str, current_user_id: str) -> VisitorVisitResponse:
         visit = db.query(VisitorVisit).filter(VisitorVisit.id == visit_id, VisitorVisit.company_id == company_id).first()
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException
         if not visit:
-            raise ValueError("Visit not found")
-
+            raise ResourceNotFoundException("Visit not found")
+            
         if visit.visit_status != VisitorVisitStatus.REQUESTED:
-            raise ValueError("Only REQUESTED visits can be approved")
+            raise StateTransitionException("Only REQUESTED visits can be approved")
 
         old_status = visit.visit_status
         visit.visit_status = VisitorVisitStatus.APPROVED
@@ -143,11 +147,12 @@ class VisitorService:
     @classmethod
     def deny_visit(cls, db: Session, company_id: str, visit_id: str, current_user_id: str, reason: str) -> VisitorVisitResponse:
         visit = db.query(VisitorVisit).filter(VisitorVisit.id == visit_id, VisitorVisit.company_id == company_id).first()
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException
         if not visit:
-            raise ValueError("Visit not found")
-
+            raise ResourceNotFoundException("Visit not found")
+            
         if visit.visit_status != VisitorVisitStatus.REQUESTED:
-            raise ValueError("Only REQUESTED visits can be denied")
+            raise StateTransitionException("Only REQUESTED visits can be denied")
 
         old_status = visit.visit_status
         visit.visit_status = VisitorVisitStatus.DENIED
@@ -171,11 +176,12 @@ class VisitorService:
     @classmethod
     def cancel_visit(cls, db: Session, company_id: str, visit_id: str, current_user_id: str, reason: str) -> VisitorVisitResponse:
         visit = db.query(VisitorVisit).filter(VisitorVisit.id == visit_id, VisitorVisit.company_id == company_id).first()
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException
         if not visit:
-            raise ValueError("Visit not found")
-
+            raise ResourceNotFoundException("Visit not found")
+            
         if visit.visit_status not in [VisitorVisitStatus.REQUESTED, VisitorVisitStatus.APPROVED]:
-            raise ValueError("Only REQUESTED or APPROVED visits can be cancelled")
+            raise StateTransitionException("Only REQUESTED or APPROVED visits can be cancelled")
 
         old_status = visit.visit_status
         # Visit Lifecycle Documentation: CANCELLED means visit intentionally terminated by a user.
@@ -200,15 +206,16 @@ class VisitorService:
     @classmethod
     def check_in(cls, db: Session, company_id: str, visit_id: str, current_user_id: str) -> VisitorVisitResponse:
         visit = db.query(VisitorVisit).filter(VisitorVisit.id == visit_id, VisitorVisit.company_id == company_id).first()
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException
         if not visit:
-            raise ValueError("Visit not found")
-
+            raise ResourceNotFoundException("Visit not found")
+            
         if visit.visit_status != VisitorVisitStatus.APPROVED:
-            raise ValueError("Visit must be APPROVED to check-in")
-        
-        now = datetime.now(timezone.utc)
-        if now > visit.valid_until:
-            raise ValueError("Visit validity period has expired")
+            raise StateTransitionException("Visit must be APPROVED to check-in")
+            
+        now_utc = datetime.now(timezone.utc)
+        if visit.valid_until and now_utc > visit.valid_until:
+            raise StateTransitionException("Visit validity period has expired")
 
         # Invoke AttendanceService to enforce check-in and update attendance ownership records
         from app.schemas.schemas import AttendancePunch
@@ -222,7 +229,7 @@ class VisitorService:
 
         old_status = visit.visit_status
         visit.visit_status = VisitorVisitStatus.ACTIVE
-        visit.checked_in_at = now
+        visit.checked_in_at = now_utc
         visit.visit_version += 1
 
         audit_batch_id = str(uuid.uuid4())
@@ -243,11 +250,12 @@ class VisitorService:
     @classmethod
     def check_out(cls, db: Session, company_id: str, visit_id: str, current_user_id: str) -> VisitorVisitResponse:
         visit = db.query(VisitorVisit).filter(VisitorVisit.id == visit_id, VisitorVisit.company_id == company_id).first()
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException
         if not visit:
-            raise ValueError("Visit not found")
-
+            raise ResourceNotFoundException("Visit not found")
+            
         if visit.visit_status != VisitorVisitStatus.ACTIVE:
-            raise ValueError("Visit must be ACTIVE to check-out")
+            raise StateTransitionException("Visit must be ACTIVE to check-out")
         
         # Invoke AttendanceService to enforce check-out and update attendance ownership records
         from app.schemas.schemas import AttendancePunch
@@ -300,15 +308,16 @@ class VisitorService:
     @classmethod
     def expire_visit(cls, db: Session, company_id: str, visit_id: str, current_user_id: str) -> VisitorVisitResponse:
         visit = db.query(VisitorVisit).filter(VisitorVisit.id == visit_id, VisitorVisit.company_id == company_id).first()
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException
         if not visit:
-            raise ValueError("Visit not found")
-
+            raise ResourceNotFoundException("Visit not found")
+            
         if visit.visit_status not in [VisitorVisitStatus.REQUESTED, VisitorVisitStatus.APPROVED]:
-            raise ValueError("Only un-arrived visits can be expired")
-
-        now = datetime.now(timezone.utc)
-        if now <= visit.valid_until:
-            raise ValueError("Visit validity period has not expired yet")
+            raise StateTransitionException("Only un-arrived visits can be expired")
+            
+        now_utc = datetime.now(timezone.utc)
+        if visit.valid_until and now_utc <= visit.valid_until:
+            raise StateTransitionException("Visit validity period has not expired yet")
 
         old_status = visit.visit_status
         # Visit Lifecycle Documentation: EXPIRED means visitor never successfully arrived before validity expired.

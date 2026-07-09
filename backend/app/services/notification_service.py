@@ -98,10 +98,14 @@ class NotificationService:
 
     @classmethod
     def create_notification(cls, db: Session, company_id: str, current_user_id: str, payload: NotificationCreate) -> NotificationResponse:
+        from app.core.exceptions import ValidationException, ResourceNotFoundException, StateTransitionException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         # Validate targets
         recipient_ids = cls.resolve_recipients(db, company_id, payload)
+        from app.core.exceptions import ValidationException, ResourceNotFoundException, StateTransitionException
         if not recipient_ids:
-            raise ValueError("No valid recipients resolved for notification")
+            raise ValidationException("No valid recipients resolved for notification")
 
         notification_number = cls._generate_notification_number(db)
 
@@ -150,8 +154,9 @@ class NotificationService:
     @classmethod
     def mark_read(cls, db: Session, notification_id: str, current_user_id: str, reason: Optional[str] = None) -> NotificationResponse:
         notification = db.query(Notification).filter(Notification.id == notification_id).first()
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException
         if not notification:
-            raise ValueError("Notification not found")
+            raise ResourceNotFoundException("Notification not found")
 
         recipient = db.query(NotificationRecipient).filter(
             NotificationRecipient.notification_id == notification_id,
@@ -159,10 +164,10 @@ class NotificationService:
         ).first()
 
         if not recipient:
-            raise ValueError("Recipient record not found for this user")
+            raise ResourceNotFoundException("Recipient record not found for this user")
 
         if recipient.recipient_status != RecipientStatus.UNREAD:
-            raise ValueError("Only UNREAD notifications can be marked READ")
+            raise StateTransitionException("Only UNREAD notifications can be marked READ")
 
         # Lifecycle Documentation: UNREAD -> READ
         # This lifecycle belongs exclusively to NotificationRecipient.
@@ -190,8 +195,9 @@ class NotificationService:
     @classmethod
     def archive(cls, db: Session, notification_id: str, current_user_id: str, reason: Optional[str] = None) -> NotificationResponse:
         notification = db.query(Notification).filter(Notification.id == notification_id).first()
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException
         if not notification:
-            raise ValueError("Notification not found")
+            raise ResourceNotFoundException("Notification not found")
 
         recipient = db.query(NotificationRecipient).filter(
             NotificationRecipient.notification_id == notification_id,
@@ -199,10 +205,10 @@ class NotificationService:
         ).first()
 
         if not recipient:
-            raise ValueError("Recipient record not found for this user")
+            raise ResourceNotFoundException("Recipient record not found for this user")
 
         if recipient.recipient_status == RecipientStatus.ARCHIVED:
-            raise ValueError("Notification is already ARCHIVED")
+            raise StateTransitionException("Notification is already ARCHIVED")
 
         # Lifecycle Documentation: READ -> ARCHIVED (or UNREAD -> ARCHIVED)
         # This lifecycle belongs exclusively to NotificationRecipient.

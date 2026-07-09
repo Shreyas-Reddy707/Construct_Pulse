@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from typing import List
 from app.db.database import get_db
@@ -16,18 +16,13 @@ def admin_checkout(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("attendance.manage"))
 ):
-    try:
-        result = AttendanceGovernanceService.administrative_checkout(
-            session=db,
-            attendance_id=attendance_id,
-            performed_by=current_user,
-            reason_code=request.reason_code,
-            reason_notes=request.reason_notes
-        )
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
+    return AttendanceGovernanceService.administrative_checkout(
+        session=db,
+        attendance_id=attendance_id,
+        performed_by=current_user,
+        reason_code=request.reason_code,
+        reason_notes=request.reason_notes
+    )
 
 @router.post("/{attendance_id}/correct", response_model=schemas.GovernanceResult)
 def correct_attendance(
@@ -36,20 +31,15 @@ def correct_attendance(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("attendance.manage"))
 ):
-    try:
-        result = AttendanceGovernanceService.correct_attendance(
-            session=db,
-            attendance_id=attendance_id,
-            performed_by=current_user,
-            reason_code=request.reason_code,
-            reason_notes=request.reason_notes,
-            new_check_in_time=request.check_in_time,
-            new_check_out_time=request.check_out_time
-        )
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
+    return AttendanceGovernanceService.correct_attendance(
+        session=db,
+        attendance_id=attendance_id,
+        performed_by=current_user,
+        reason_code=request.reason_code,
+        reason_notes=request.reason_notes,
+        new_check_in_time=request.check_in_time,
+        new_check_out_time=request.check_out_time
+    )
 
 @router.get("/{attendance_id}/corrections", response_model=List[schemas.AttendanceCorrectionLogResponse])
 def get_correction_history(
@@ -57,12 +47,8 @@ def get_correction_history(
     db: Session = Depends(get_db),
     current_user: User = Depends(PermissionChecker("attendance.view"))
 ):
-    try:
-        logs = AttendanceGovernanceService.correction_history(
-            session=db,
-            attendance_id=attendance_id,
-            performed_by=current_user
-        )
-        return logs
-    except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    return AttendanceGovernanceService.correction_history(
+        session=db,
+        attendance_id=attendance_id,
+        performed_by=current_user
+    )

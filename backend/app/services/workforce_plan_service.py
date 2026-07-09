@@ -81,9 +81,13 @@ class WorkforcePlanService:
 
     @classmethod
     def create_draft(cls, db: Session, company_id: str, current_user_id: str, payload: WorkforcePlanCreate) -> WorkforcePlanResponse:
+        from app.core.exceptions import ResourceNotFoundException, ValidationException, StateTransitionException, ConflictException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
+        # Validate site
         site = db.query(Site).filter(Site.id == payload.site_id, Site.company_id == company_id).first()
         if not site:
-            raise ValueError("Site not found")
+            raise ResourceNotFoundException("Site not found")
 
         existing_plan = db.query(WorkforcePlan).filter(
             WorkforcePlan.company_id == company_id,
@@ -92,7 +96,7 @@ class WorkforcePlanService:
         ).first()
 
         if existing_plan:
-            raise ValueError("A workforce plan already exists for this site on this date")
+            raise ConflictException("A workforce plan already exists for this site on this date")
 
         plan_number = cls._generate_plan_number(db)
 
@@ -132,17 +136,20 @@ class WorkforcePlanService:
 
     @classmethod
     def set_department_targets(cls, db: Session, company_id: str, plan_id: str, current_user_id: str, targets: List[DepartmentTargetCreate]) -> WorkforcePlanResponse:
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         plan = db.query(WorkforcePlan).filter(WorkforcePlan.id == plan_id, WorkforcePlan.company_id == company_id).first()
         if not plan:
-            raise ValueError("Plan not found")
-
+            raise ResourceNotFoundException("Plan not found")
+            
         if plan.plan_status != PlanStatus.DRAFT:
-            raise ValueError("Only DRAFT plans can have targets updated")
+            raise StateTransitionException("Only DRAFT plans can have targets updated")
 
         for t in targets:
             dept = db.query(Department).filter(Department.id == t.department_id, Department.company_id == company_id).first()
             if not dept:
-                raise ValueError(f"Department {t.department_id} not found")
+                raise ResourceNotFoundException(f"Department {t.department_id} not found")
 
         # Clear existing targets for simple replacement
         db.query(WorkforcePlanDepartment).filter(WorkforcePlanDepartment.workforce_plan_id == plan.id).delete()
@@ -178,17 +185,20 @@ class WorkforcePlanService:
 
     @classmethod
     def set_contractor_targets(cls, db: Session, company_id: str, plan_id: str, current_user_id: str, targets: List[ContractorTargetCreate]) -> WorkforcePlanResponse:
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         plan = db.query(WorkforcePlan).filter(WorkforcePlan.id == plan_id, WorkforcePlan.company_id == company_id).first()
         if not plan:
-            raise ValueError("Plan not found")
-
+            raise ResourceNotFoundException("Plan not found")
+            
         if plan.plan_status != PlanStatus.DRAFT:
-            raise ValueError("Only DRAFT plans can have targets updated")
+            raise StateTransitionException("Only DRAFT plans can have targets updated")
 
         for t in targets:
             contractor = db.query(Contractor).filter(Contractor.id == t.contractor_id, Contractor.company_id == company_id).first()
             if not contractor:
-                raise ValueError(f"Contractor {t.contractor_id} not found")
+                raise ResourceNotFoundException(f"Contractor {t.contractor_id} not found")
 
         # Clear existing targets for simple replacement
         db.query(WorkforcePlanContractor).filter(WorkforcePlanContractor.workforce_plan_id == plan.id).delete()
@@ -223,12 +233,15 @@ class WorkforcePlanService:
 
     @classmethod
     def approve(cls, db: Session, company_id: str, plan_id: str, current_user_id: str, reason: str) -> WorkforcePlanResponse:
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         plan = db.query(WorkforcePlan).filter(WorkforcePlan.id == plan_id, WorkforcePlan.company_id == company_id).first()
         if not plan:
-            raise ValueError("Plan not found")
-
+            raise ResourceNotFoundException("Plan not found")
+            
         if plan.plan_status != PlanStatus.DRAFT:
-            raise ValueError("Only DRAFT plans can be approved")
+            raise StateTransitionException("Only DRAFT plans can be approved")
 
         # Lifecycle Documentation: APPROVED
         # - operational baseline
@@ -259,12 +272,15 @@ class WorkforcePlanService:
 
     @classmethod
     def archive(cls, db: Session, company_id: str, plan_id: str, current_user_id: str, reason: str) -> WorkforcePlanResponse:
+        from app.core.exceptions import ResourceNotFoundException, StateTransitionException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         plan = db.query(WorkforcePlan).filter(WorkforcePlan.id == plan_id, WorkforcePlan.company_id == company_id).first()
         if not plan:
-            raise ValueError("Plan not found")
-
+            raise ResourceNotFoundException("Plan not found")
+            
         if plan.plan_status != PlanStatus.APPROVED:
-            raise ValueError("Only APPROVED plans can be archived")
+            raise StateTransitionException("Only APPROVED plans can be archived")
 
         # Lifecycle Documentation: ARCHIVED
         # - historical record

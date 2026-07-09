@@ -82,9 +82,12 @@ class IncidentService:
 
     @classmethod
     def create_incident(cls, db: Session, company_id: str, current_user_id: str, payload: IncidentCreate) -> IncidentResponse:
+        from app.core.exceptions import ResourceNotFoundException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         site = db.query(Site).filter(Site.id == payload.site_id, Site.company_id == company_id).first()
         if not site:
-            raise ValueError("Site not found or not in company")
+            raise ResourceNotFoundException("Site not found or not in company")
 
         incident_number = cls._generate_incident_number(db, company_id)
 
@@ -132,13 +135,16 @@ class IncidentService:
 
     @classmethod
     def assign_investigator(cls, db: Session, company_id: str, incident_id: str, current_user_id: str, payload: IncidentAssign) -> IncidentResponse:
+        from app.core.exceptions import ResourceNotFoundException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         incident = db.query(Incident).filter(Incident.id == incident_id, Incident.company_id == company_id).first()
         if not incident:
-            raise ValueError("Incident not found")
+            raise ResourceNotFoundException("Incident not found")
 
         investigator = db.query(User).filter(User.id == payload.assigned_to, User.company_id == company_id).first()
         if not investigator:
-            raise ValueError("Assigned user not found in company")
+            raise ResourceNotFoundException("Assigned user not found in company")
 
         incident.assigned_to = payload.assigned_to
         incident.incident_version += 1 # Optimistic concurrency preparation
@@ -172,9 +178,12 @@ class IncidentService:
 
     @classmethod
     def update_status(cls, db: Session, company_id: str, incident_id: str, current_user_id: str, payload: IncidentStatusUpdate) -> IncidentResponse:
+        from app.core.exceptions import ResourceNotFoundException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         incident = db.query(Incident).filter(Incident.id == incident_id, Incident.company_id == company_id).first()
         if not incident:
-            raise ValueError("Incident not found")
+            raise ResourceNotFoundException("Incident not found")
 
         cls._update_status_internal(db, incident, payload.status, current_user_id, payload.reason)
         
@@ -184,14 +193,17 @@ class IncidentService:
 
     @classmethod
     def add_participant(cls, db: Session, company_id: str, incident_id: str, current_user_id: str, payload: IncidentParticipantCreate) -> IncidentParticipantResponse:
+        from app.core.exceptions import ResourceNotFoundException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         incident = db.query(Incident).filter(Incident.id == incident_id, Incident.company_id == company_id).first()
         if not incident:
-            raise ValueError("Incident not found")
+            raise ResourceNotFoundException("Incident not found")
 
         if payload.user_id:
             user = db.query(User).filter(User.id == payload.user_id, User.company_id == company_id).first()
             if not user:
-                raise ValueError("Participant user not found in company")
+                raise ResourceNotFoundException("Participant user not found in company")
 
         participant = IncidentParticipant(
             incident_id=incident.id,
@@ -211,9 +223,12 @@ class IncidentService:
 
     @classmethod
     def add_evidence(cls, db: Session, company_id: str, incident_id: str, current_user_id: str, payload: IncidentEvidenceCreate) -> IncidentEvidenceResponse:
+        from app.core.exceptions import ResourceNotFoundException, TenantIsolationException
+        if not company_id:
+            raise TenantIsolationException("User must belong to a company")
         incident = db.query(Incident).filter(Incident.id == incident_id, Incident.company_id == company_id).first()
         if not incident:
-            raise ValueError("Incident not found")
+            raise ResourceNotFoundException("Incident not found")
 
         evidence = IncidentEvidence(
             incident_id=incident.id,
@@ -234,18 +249,20 @@ class IncidentService:
 
     @classmethod
     def get_participants(cls, db: Session, company_id: str, incident_id: str) -> List[IncidentParticipantResponse]:
+        from app.core.exceptions import ResourceNotFoundException
         incident = db.query(Incident).filter(Incident.id == incident_id, Incident.company_id == company_id).first()
         if not incident:
-            raise ValueError("Incident not found")
+            raise ResourceNotFoundException("Incident not found")
         
         participants = db.query(IncidentParticipant).filter(IncidentParticipant.incident_id == incident_id).all()
         return [cls._map_participant_to_dto(p) for p in participants]
 
     @classmethod
     def get_evidence(cls, db: Session, company_id: str, incident_id: str) -> List[IncidentEvidenceResponse]:
+        from app.core.exceptions import ResourceNotFoundException
         incident = db.query(Incident).filter(Incident.id == incident_id, Incident.company_id == company_id).first()
         if not incident:
-            raise ValueError("Incident not found")
+            raise ResourceNotFoundException("Incident not found")
         
         evidence_list = db.query(IncidentEvidence).filter(IncidentEvidence.incident_id == incident_id).all()
         return [cls._map_evidence_to_dto(e) for e in evidence_list]
