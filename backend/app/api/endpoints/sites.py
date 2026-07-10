@@ -6,6 +6,8 @@ from app.schemas import schemas
 from app.models.models import User, UserRole
 from app.api.deps import get_current_user, RoleChecker, PermissionChecker
 from app.services.site_service import SiteService
+from app.modules.sites.services.site_workspace_service import SiteWorkspaceService
+from app.modules.sites.schemas.site_dto import SiteDetailResponse
 
 router = APIRouter()
 
@@ -27,6 +29,11 @@ def create_site(site_in: schemas.SiteCreate, db: Session = Depends(get_db), curr
 @router.get("/{site_id}", response_model=schemas.SiteResponse)
 def read_site(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return SiteService.get_site(db, site_id, current_user)
+
+@router.get("/{site_id}/workspace", response_model=SiteDetailResponse)
+def read_site_workspace(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return SiteWorkspaceService.get_site_workspace_detail(db, site_id, current_user)
+
 
 @router.put("/{site_id}", response_model=schemas.SiteResponse)
 def update_site(site_id: str, site_in: schemas.SiteUpdate, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):

@@ -104,6 +104,10 @@ class AttendanceService:
         )
         
         session.add(attendance)
+        
+        # Atomic occupancy increment
+        cls._increment_occupancy(session, site.id)
+        
         session.commit()
         session.refresh(attendance)
         
@@ -133,6 +137,9 @@ class AttendanceService:
         attendance.status = AttendanceStatus.CHECKED_OUT
         attendance.check_out_method = AttendanceMethod.SYSTEM  # Can be extended in future batches
         
+        # Atomic occupancy decrement
+        cls._decrement_occupancy(session, site_id)
+        
         session.commit()
         session.refresh(attendance)
         
@@ -158,6 +165,9 @@ class AttendanceService:
         attendance.status = AttendanceStatus.CHECKED_OUT
         attendance.check_out_method = AttendanceMethod.ADMIN_OVERRIDE
         attendance.attendance_version += 1
+        
+        # Atomic occupancy decrement
+        cls._decrement_occupancy(session, attendance.site_id)
         
         session.flush()
         
@@ -185,12 +195,31 @@ class AttendanceService:
             if attendance.status == AttendanceStatus.CHECKED_IN:
                 attendance.status = AttendanceStatus.CHECKED_OUT
                 attendance.check_out_method = AttendanceMethod.ADMIN_OVERRIDE
+                
+                # Atomic occupancy decrement
+                cls._decrement_occupancy(session, attendance.site_id)
 
         if check_in_time or check_out_time:
             attendance.attendance_version += 1
             
         session.flush()
         return attendance
+
+    @classmethod
+    def _increment_occupancy(cls, session: Session, site_id: str):
+        from sqlalchemy import text
+        session.execute(
+            text("UPDATE sites SET current_occupancy = current_occupancy + 1 WHERE id = :site_id"),
+            {"site_id": site_id}
+        )
+
+    @classmethod
+    def _decrement_occupancy(cls, session: Session, site_id: str):
+        from sqlalchemy import text
+        session.execute(
+            text("UPDATE sites SET current_occupancy = GREATEST(current_occupancy - 1, 0) WHERE id = :site_id"),
+            {"site_id": site_id}
+        )
 
     # --- Architecture Preparation for Future Domain Events ---
     @classmethod
