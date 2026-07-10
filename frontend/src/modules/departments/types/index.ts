@@ -10,4 +10,13 @@ export interface Department {
   created_at: string;
 }
 
+export interface DepartmentDetail extends Department {
+  department_code: string;
+  head_name: string;
+  head_phone: string;
+  head_email: string;
+  total_workers: number;
+  active_sites: number;
+}
+
 export type { PaginatedResponse };

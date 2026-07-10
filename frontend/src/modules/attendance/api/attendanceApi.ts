@@ -39,4 +39,11 @@ export const attendanceApi = {
     const response = await apiClient.get<PaginatedResponse<AttendanceLog>>(`/attendance/contractor/${contractorId}?${searchParams.toString()}`);
     return response.data;
   },
+
+  getDepartmentHistory: async (departmentId: string, params: Record<string, string | null>): Promise<PaginatedResponse<AttendanceLog>> => {
+    const { serializeQueryParams } = await import("@/api/utils");
+    const searchParams = serializeQueryParams(params);
+    const response = await apiClient.get<PaginatedResponse<AttendanceLog>>(`/attendance/department/${departmentId}?${searchParams.toString()}`);
+    return response.data;
+  },
 };

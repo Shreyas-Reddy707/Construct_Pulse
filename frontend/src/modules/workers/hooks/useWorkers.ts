@@ -10,7 +10,7 @@ export const workerKeys = {
   detail: (id: string) => [...workerKeys.details(), id] as const,
 };
 
-export function useWorkers() {
+export function useWorkers(overrideParams?: Record<string, string | null>) {
   const [searchParams] = useSearchParams();
   
   // Convert URLSearchParams to a plain object for the query key
@@ -22,6 +22,11 @@ export function useWorkers() {
   // Ensure default pagination exists for query key stability
   params.page = params.page || "1";
   params.limit = params.limit || "20";
+
+  // Merge override parameters
+  if (overrideParams) {
+    Object.assign(params, overrideParams);
+  }
 
   return useQuery({
     queryKey: workerKeys.list(params),

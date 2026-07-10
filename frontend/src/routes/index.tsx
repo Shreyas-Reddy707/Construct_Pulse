@@ -31,6 +31,13 @@ const ContractorAttendanceTab = lazy(() => import("@/modules/contractors/pages/w
 const ContractorComplianceTab = lazy(() => import("@/modules/contractors/pages/workspace/ContractorComplianceTab"));
 const ContractorPayrollTab = lazy(() => import("@/modules/contractors/pages/workspace/ContractorPayrollTab"));
 
+const DepartmentWorkspaceLayout = lazy(() => import("@/modules/departments/pages/workspace/DepartmentWorkspaceLayout").then(m => ({ default: m.DepartmentWorkspaceLayout })));
+const DepartmentRosterTab = lazy(() => import("@/modules/departments/pages/workspace/DepartmentRosterTab"));
+const DepartmentSitesTab = lazy(() => import("@/modules/departments/pages/workspace/DepartmentSitesTab"));
+const DepartmentAttendanceTab = lazy(() => import("@/modules/departments/pages/workspace/DepartmentAttendanceTab"));
+const DepartmentPlanningTab = lazy(() => import("@/modules/departments/pages/workspace/DepartmentPlanningTab"));
+const DepartmentDocumentsTab = lazy(() => import("@/modules/departments/pages/workspace/DepartmentDocumentsTab"));
+
 function TabSuspense({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={<div className="p-6 space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-64 w-full" /></div>}>
@@ -129,7 +136,42 @@ export const router = createBrowserRouter([
           },
           {
             path: "departments",
-            element: <DepartmentDirectoryPage />,
+            children: [
+              {
+                index: true,
+                element: <DepartmentDirectoryPage />,
+              },
+              {
+                path: ":id",
+                element: (
+                  <Suspense fallback={<div className="h-screen w-full flex items-center justify-center"><Skeleton className="h-32 w-full max-w-4xl" /></div>}>
+                    <DepartmentWorkspaceLayout />
+                  </Suspense>
+                ),
+                children: [
+                  {
+                    index: true,
+                    element: <TabSuspense><DepartmentRosterTab /></TabSuspense>,
+                  },
+                  {
+                    path: "sites",
+                    element: <TabSuspense><DepartmentSitesTab /></TabSuspense>,
+                  },
+                  {
+                    path: "attendance",
+                    element: <TabSuspense><DepartmentAttendanceTab /></TabSuspense>,
+                  },
+                  {
+                    path: "planning",
+                    element: <TabSuspense><DepartmentPlanningTab /></TabSuspense>,
+                  },
+                  {
+                    path: "documents",
+                    element: <TabSuspense><DepartmentDocumentsTab /></TabSuspense>,
+                  },
+                ],
+              },
+            ],
           },
           {
             path: "contractors",

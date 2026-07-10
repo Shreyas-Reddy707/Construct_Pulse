@@ -10,7 +10,7 @@ export const siteKeys = {
   detail: (id: string) => [...siteKeys.details(), id] as const,
 };
 
-export function useSites() {
+export function useSites(overrideParams?: Record<string, string | null>) {
   const [searchParams] = useSearchParams();
   
   // Convert URLSearchParams to a plain object for the query key
@@ -22,6 +22,11 @@ export function useSites() {
   // Ensure default pagination exists for query key stability
   params.page = params.page || "1";
   params.limit = params.limit || "20";
+
+  // Merge override parameters
+  if (overrideParams) {
+    Object.assign(params, overrideParams);
+  }
 
   return useQuery({
     queryKey: siteKeys.list(params),

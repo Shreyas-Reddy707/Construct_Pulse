@@ -1,5 +1,5 @@
 import { apiClient } from "@/api/client";
-import type { Department, PaginatedResponse } from "../types";
+import type { Department, DepartmentDetail, PaginatedResponse } from "../types";
 import { serializeQueryParams } from "@/api/utils";
 
 export const departmentApi = {
@@ -7,6 +7,11 @@ export const departmentApi = {
     const searchParams = serializeQueryParams(params);
 
     const response = await apiClient.get<PaginatedResponse<Department>>(`/departments?${searchParams.toString()}`);
+    return response.data;
+  },
+
+  getDepartmentById: async (id: string): Promise<DepartmentDetail> => {
+    const response = await apiClient.get<DepartmentDetail>(`/departments/${id}`);
     return response.data;
   },
 };
