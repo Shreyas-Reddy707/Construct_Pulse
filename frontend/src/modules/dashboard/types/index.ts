@@ -1,27 +1,17 @@
-export interface DashboardSummary {
-  headcount: number;
-  occupancy: number;
-  today_hours: number;
-  pending_approvals: number;
+export interface DashboardMetricsResponse {
+  total_network_occupancy: number;
+  total_active_sites: number;
+  total_active_workers: number;
 }
 
-export interface DashboardTrend {
-  date: string;
-  headcount: number;
-  occupancy: number;
-}
-
-export interface LiveOccupancy {
-  site_id: string;
-  current_occupancy: number;
-  max_capacity: number;
-  status: "safe" | "warning" | "critical";
-}
-
-export interface PendingApproval {
+export interface RecentActivityItem {
   id: string;
-  type: "timesheet" | "registration" | "incident";
-  description: string;
-  submitted_by: string;
-  submitted_at: string;
+  worker_name: string;
+  site_name: string;
+  action: "check_in" | "check_out";
+  timestamp: string; // ISO string
+}
+
+export interface RecentActivityResponse {
+  items: RecentActivityItem[];
 }
