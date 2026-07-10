@@ -12,4 +12,8 @@ export interface Site {
   created_at: string;
 }
 
+export interface SiteDetail extends Site {
+  project_manager_name: string;
+}
+
 export type { PaginatedResponse };

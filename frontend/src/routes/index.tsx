@@ -1,4 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { AuthLayout } from "@/layouts/AuthLayout";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { AuthGuard } from "./AuthGuard";
@@ -15,6 +17,20 @@ import { WorkerOverviewTab } from "@/modules/workers/pages/workspace/WorkerOverv
 import { WorkerAttendanceTab } from "@/modules/workers/pages/workspace/WorkerAttendanceTab";
 import { WorkerSiteAccessTab } from "@/modules/workers/pages/workspace/WorkerSiteAccessTab";
 import { WorkerDocumentsTab } from "@/modules/workers/pages/workspace/WorkerDocumentsTab";
+
+const SiteWorkspaceLayout = lazy(() => import("@/modules/sites/pages/workspace/SiteWorkspaceLayout").then(m => ({ default: m.SiteWorkspaceLayout })));
+const SiteRosterTab = lazy(() => import("@/modules/sites/pages/workspace/SiteRosterTab"));
+const SiteAttendanceTab = lazy(() => import("@/modules/sites/pages/workspace/SiteAttendanceTab"));
+const SiteContractorsTab = lazy(() => import("@/modules/sites/pages/workspace/SiteContractorsTab"));
+const SiteMusterTab = lazy(() => import("@/modules/sites/pages/workspace/SiteMusterTab"));
+
+function TabSuspense({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<div className="p-6 space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-64 w-full" /></div>}>
+      {children}
+    </Suspense>
+  );
+}
 
 export const router = createBrowserRouter([
   {
@@ -71,7 +87,38 @@ export const router = createBrowserRouter([
           },
           {
             path: "sites",
-            element: <SiteDirectoryPage />,
+            children: [
+              {
+                index: true,
+                element: <SiteDirectoryPage />,
+              },
+              {
+                path: ":id",
+                element: (
+                  <Suspense fallback={<div className="h-screen w-full flex items-center justify-center"><Skeleton className="h-32 w-full max-w-4xl" /></div>}>
+                    <SiteWorkspaceLayout />
+                  </Suspense>
+                ),
+                children: [
+                  {
+                    index: true,
+                    element: <TabSuspense><SiteRosterTab /></TabSuspense>,
+                  },
+                  {
+                    path: "attendance",
+                    element: <TabSuspense><SiteAttendanceTab /></TabSuspense>,
+                  },
+                  {
+                    path: "contractors",
+                    element: <TabSuspense><SiteContractorsTab /></TabSuspense>,
+                  },
+                  {
+                    path: "muster",
+                    element: <TabSuspense><SiteMusterTab /></TabSuspense>,
+                  },
+                ],
+              },
+            ],
           },
           {
             path: "departments",

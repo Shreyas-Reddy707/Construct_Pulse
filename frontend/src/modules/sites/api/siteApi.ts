@@ -1,5 +1,5 @@
 import { apiClient } from "@/api/client";
-import type { Site, PaginatedResponse } from "../types";
+import type { Site, SiteDetail, PaginatedResponse } from "../types";
 import { serializeQueryParams } from "@/api/utils";
 
 export const siteApi = {
@@ -8,6 +8,11 @@ export const siteApi = {
     const searchParams = serializeQueryParams(params);
 
     const response = await apiClient.get<PaginatedResponse<Site>>(`/sites?${searchParams.toString()}`);
+    return response.data;
+  },
+
+  getSiteById: async (id: string): Promise<SiteDetail> => {
+    const response = await apiClient.get<SiteDetail>(`/sites/${id}`);
     return response.data;
   },
 };
