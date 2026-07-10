@@ -5,6 +5,11 @@ from app.db.database import Base
 import uuid
 import enum
 
+class ContractorComplianceStatus(str, enum.Enum):
+    COMPLIANT = "compliant"
+    NON_COMPLIANT = "non_compliant"
+    REVIEW_PENDING = "review_pending"
+
 class WorkerStatus(str, enum.Enum):
     PENDING = "pending"
     APPROVED = "approved"
@@ -291,10 +296,18 @@ class Contractor(SoftDeleteMixin, Base):
     name = Column(String, nullable=False)
     phone = Column(String)
     trade = Column(String)
+    
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=True, onupdate=func.now())
+    operational_status = Column(String, nullable=True)
+    compliance_status = Column(Enum(ContractorComplianceStatus), nullable=True)
+    contract_expiry = Column(DateTime(timezone=True), nullable=True)
+    primary_contact_id = Column(String, ForeignKey("users.id"), nullable=True)
 
     company = relationship("Company", back_populates="contractors")
-    users = relationship("User", back_populates="contractor")
+    users = relationship("User", back_populates="contractor", foreign_keys="[User.contractor_id]")
     sites = relationship("Site", secondary=contractor_to_site, back_populates="assigned_contractors")
+    primary_contact = relationship("User", foreign_keys=[primary_contact_id])
 
 class User(SoftDeleteMixin, Base):
     __tablename__ = "users"

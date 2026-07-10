@@ -6,6 +6,8 @@ from app.schemas import schemas
 from app.models.models import User, UserRole
 from app.api.deps import get_current_user, RoleChecker
 from app.services.contractor_service import ContractorService
+from app.modules.contractors.services.contractor_workspace_service import ContractorWorkspaceService
+from app.modules.contractors.schemas.contractor_dto import ContractorDetailResponse
 
 router = APIRouter()
 
@@ -27,3 +29,11 @@ def create_contractor(
     contractor = ContractorService.create_contractor(db, current_user, contractor_in)
     db.refresh(contractor)
     return contractor
+
+@router.get("/{contractor_id}/workspace", response_model=ContractorDetailResponse)
+def read_contractor_workspace(
+    contractor_id: str, 
+    db: Session = Depends(get_db), 
+    current_user: User = Depends(get_current_user)
+):
+    return ContractorWorkspaceService.get_contractor_workspace_detail(db, contractor_id, current_user)
