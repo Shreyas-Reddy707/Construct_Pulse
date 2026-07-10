@@ -422,6 +422,11 @@ class Attendance(Base):
     __table_args__ = (
         Index('ix_attendances_site_id_check_in_time', 'site_id', 'check_in_time'),
         Index('ix_attendances_user_id_check_in_time', 'user_id', 'check_in_time'),
+        Index('ix_attendances_site_id_check_out_time', 'site_id', 'check_out_time'),
+        Index('ix_attendances_user_id_check_out_time', 'user_id', 'check_out_time'),
+        Index('ix_attendances_company_id', 'company_id'),
+        Index('ix_attendances_user_id', 'user_id'),
+        Index('ix_attendances_site_id', 'site_id'),
     )
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, ForeignKey("users.id"))
