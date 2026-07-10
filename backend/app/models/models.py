@@ -10,6 +10,10 @@ class ContractorComplianceStatus(str, enum.Enum):
     NON_COMPLIANT = "non_compliant"
     REVIEW_PENDING = "review_pending"
 
+class DepartmentStatus(str, enum.Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
 class WorkerStatus(str, enum.Enum):
     PENDING = "pending"
     APPROVED = "approved"
@@ -280,14 +284,22 @@ class Company(SoftDeleteMixin, Base):
 
 class Department(SoftDeleteMixin, Base):
     __tablename__ = "departments"
+    __table_args__ = (UniqueConstraint('company_id', 'department_code', name='uq_company_department_code'),)
+    
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     company_id = Column(String, ForeignKey("companies.id"))
+    department_code = Column(String, index=True, nullable=True)
     name = Column(String, nullable=False)
     description = Column(String)
+    status = Column(Enum(DepartmentStatus), nullable=True)
+    department_head_id = Column(String, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=True, onupdate=func.now())
 
     company = relationship("Company", back_populates="departments")
-    users = relationship("User", back_populates="department")
+    users = relationship("User", back_populates="department", foreign_keys="[User.department_id]")
     sites = relationship("Site", secondary=department_to_site, back_populates="assigned_departments")
+    department_head = relationship("User", foreign_keys=[department_head_id])
 
 class Contractor(SoftDeleteMixin, Base):
     __tablename__ = "contractors"
