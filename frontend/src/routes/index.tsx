@@ -24,6 +24,13 @@ const SiteAttendanceTab = lazy(() => import("@/modules/sites/pages/workspace/Sit
 const SiteContractorsTab = lazy(() => import("@/modules/sites/pages/workspace/SiteContractorsTab"));
 const SiteMusterTab = lazy(() => import("@/modules/sites/pages/workspace/SiteMusterTab"));
 
+const ContractorWorkspaceLayout = lazy(() => import("@/modules/contractors/pages/workspace/ContractorWorkspaceLayout").then(m => ({ default: m.ContractorWorkspaceLayout })));
+const ContractorRosterTab = lazy(() => import("@/modules/contractors/pages/workspace/ContractorRosterTab"));
+const ContractorSitesTab = lazy(() => import("@/modules/contractors/pages/workspace/ContractorSitesTab"));
+const ContractorAttendanceTab = lazy(() => import("@/modules/contractors/pages/workspace/ContractorAttendanceTab"));
+const ContractorComplianceTab = lazy(() => import("@/modules/contractors/pages/workspace/ContractorComplianceTab"));
+const ContractorPayrollTab = lazy(() => import("@/modules/contractors/pages/workspace/ContractorPayrollTab"));
+
 function TabSuspense({ children }: { children: React.ReactNode }) {
   return (
     <Suspense fallback={<div className="p-6 space-y-4"><Skeleton className="h-10 w-full" /><Skeleton className="h-64 w-full" /></div>}>
@@ -126,7 +133,42 @@ export const router = createBrowserRouter([
           },
           {
             path: "contractors",
-            element: <ContractorDirectoryPage />,
+            children: [
+              {
+                index: true,
+                element: <ContractorDirectoryPage />,
+              },
+              {
+                path: ":id",
+                element: (
+                  <Suspense fallback={<div className="h-screen w-full flex items-center justify-center"><Skeleton className="h-32 w-full max-w-4xl" /></div>}>
+                    <ContractorWorkspaceLayout />
+                  </Suspense>
+                ),
+                children: [
+                  {
+                    index: true,
+                    element: <TabSuspense><ContractorRosterTab /></TabSuspense>,
+                  },
+                  {
+                    path: "sites",
+                    element: <TabSuspense><ContractorSitesTab /></TabSuspense>,
+                  },
+                  {
+                    path: "attendance",
+                    element: <TabSuspense><ContractorAttendanceTab /></TabSuspense>,
+                  },
+                  {
+                    path: "compliance",
+                    element: <TabSuspense><ContractorComplianceTab /></TabSuspense>,
+                  },
+                  {
+                    path: "payroll",
+                    element: <TabSuspense><ContractorPayrollTab /></TabSuspense>,
+                  },
+                ],
+              },
+            ],
           },
           {
             path: "visitors",
