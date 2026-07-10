@@ -188,3 +188,65 @@ class AnalyticsService:
         # Guaranteed chronological ordering
         sorted_dates = sorted(trend_map.keys())
         return [trend_map[d] for d in sorted_dates]
+
+    @classmethod
+    def get_recent_activity(cls, session: Session, current_user: User, limit: int = 10) -> Dict[str, Any]:
+        from sqlalchemy import literal, desc, asc
+        
+        company_id = current_user.company_id
+        base_query = session.query(Attendance).join(
+            Site, Attendance.site_id == Site.id
+        ).join(
+            User, Attendance.user_id == User.id
+        )
+        if current_user.role.value != "System Admin" and company_id:
+            base_query = base_query.filter(Attendance.company_id == company_id)
+
+        check_in_query = base_query.with_entities(
+            Attendance.id,
+            User.name.label("worker_name"),
+            Site.name.label("site_name"),
+            literal("check_in").label("action"),
+            Attendance.check_in_time.label("timestamp")
+        )
+        
+        check_out_query = base_query.filter(
+            Attendance.check_out_time.is_not(None)
+        ).with_entities(
+            Attendance.id,
+            User.name.label("worker_name"),
+            Site.name.label("site_name"),
+            literal("check_out").label("action"),
+            Attendance.check_out_time.label("timestamp")
+        )
+        
+        union_query = check_in_query.union_all(check_out_query)
+        subq = union_query.subquery()
+        
+        final_query = session.query(
+            subq.c.id,
+            subq.c.worker_name,
+            subq.c.site_name,
+            subq.c.action,
+            subq.c.timestamp
+        ).order_by(
+            desc(subq.c.timestamp),
+            asc(subq.c.id),
+            asc(subq.c.action)
+        ).limit(limit)
+        
+        rows = final_query.all()
+        
+        items = []
+        for row in rows:
+            ts_str = row.timestamp.isoformat() if row.timestamp else ""
+            synth_id = f"{row.id}-in" if row.action == "check_in" else f"{row.id}-out"
+            items.append({
+                "id": synth_id,
+                "worker_name": row.worker_name,
+                "site_name": row.site_name,
+                "action": row.action,
+                "timestamp": ts_str
+            })
+            
+        return {"items": items}

@@ -19,6 +19,26 @@ def get_dashboard_summary(
     """
     return AnalyticsService.get_summary(db, current_user)
 
+@router.get("/metrics")
+def get_dashboard_metrics_alias(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("reports.view"))
+):
+    """
+    Alias for /summary to match frontend expectations.
+    """
+    return AnalyticsService.get_summary(db, current_user)
+
+@router.get("/recent-activity")
+def get_recent_activity(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(PermissionChecker("reports.view"))
+):
+    """
+    Returns recent attendance activity for the dashboard.
+    """
+    return AnalyticsService.get_recent_activity(db, current_user, limit=10)
+
 @router.get("/trends")
 def get_dashboard_trends(
     start_date: datetime = Query(...),
