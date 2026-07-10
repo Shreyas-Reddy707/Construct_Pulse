@@ -1,0 +1,17 @@
+- [x] Create `src/api/adapters/pagination.ts`
+- [x] Create `src/api/adapters/worker.ts`
+- [x] Create `src/api/adapters/site.ts`
+- [x] Create `src/api/adapters/contractor.ts`
+- [x] Create `src/api/adapters/department.ts`
+- [x] Create `src/api/adapters/visitor.ts`
+- [x] Create `src/api/adapters/dashboard.ts`
+- [x] Create `src/api/adapters/attendance.ts`
+- [x] Create `src/api/adapters/index.ts`
+- [x] Update `src/modules/auth/api/authApi.ts` for Firebase + DEMO token fallback
+- [x] Update `src/modules/workers/api/workerApi.ts`
+- [x] Update `src/modules/sites/api/siteApi.ts`
+- [x] Update `src/modules/contractors/api/contractorApi.ts`
+- [x] Update `src/modules/departments/api/departmentApi.ts`
+- [x] Update `src/modules/visitors/api/visitorApi.ts`
+- [x] Update `src/modules/dashboard/api/dashboardApi.ts`
+- [x] Update `src/modules/attendance/api/attendanceApi.ts`

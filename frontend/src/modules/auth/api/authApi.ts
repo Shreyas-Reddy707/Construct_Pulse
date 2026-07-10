@@ -2,21 +2,34 @@ import { apiClient } from "@/api/client";
 import type { AuthResponse, User } from "../types";
 import type { LoginFormValues } from "../validation";
 import { authService } from "@/services/authService";
+import { env } from "@/config/environment";
 
 export const authApi = {
   login: async (credentials: LoginFormValues): Promise<AuthResponse> => {
-    // We send form data according to WS1 standard (OAuth2PasswordRequestForm usually takes username/password)
-    // Assuming backend takes JSON or form-data depending on implementation. 
-    // Standard OAuth2 FastAPI expects form-data for login:
-    const formData = new FormData();
-    formData.append("username", credentials.email);
-    formData.append("password", credentials.password);
+    let idToken = "";
+
+    // In a real production app, we would authenticate with Firebase Client SDK here:
+    // const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
+    // idToken = await userCredential.user.getIdToken();
     
-    const response = await apiClient.post<AuthResponse>("/auth/login", formData, {
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      }
+    // For MVP with DEMO_AUTH enabled on the backend, we bypass real Firebase
+    const useDemoAuth = env.enableDemoAuth;
+
+    if (useDemoAuth) {
+      // The backend DEMO_AUTH mode expects "DEMO_TOKEN_" + identifier. 
+      // We map the login email directly to this for demo purposes.
+      idToken = `DEMO_TOKEN_${credentials.email}`;
+    } else {
+      // FUTURE PRODUCTION REPLACEMENT:
+      // const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
+      // idToken = await userCredential.user.getIdToken();
+      throw new Error("Real Firebase Auth is not yet configured in this MVP.");
+    }
+
+    const response = await apiClient.post<AuthResponse>("/auth/login", {
+      token: idToken,
     });
+    
     return response.data;
   },
 
@@ -27,7 +40,5 @@ export const authApi = {
 
   logout: async (): Promise<void> => {
     authService.removeToken();
-    // In many SaaS apps, we also invalidate token on backend here if applicable
-    // await apiClient.post("/auth/logout");
   },
 };
