@@ -1,5 +1,5 @@
 import { apiClient } from "@/api/client";
-import type { Worker, PaginatedResponse } from "../types";
+import type { Worker, WorkerDetail, PaginatedResponse } from "../types";
 import { serializeQueryParams } from "@/api/utils";
 
 export const workerApi = {
@@ -12,6 +12,11 @@ export const workerApi = {
     const searchParams = serializeQueryParams(params);
 
     const response = await apiClient.get<PaginatedResponse<Worker>>(`/workers?${searchParams.toString()}`);
+    return response.data;
+  },
+
+  getWorkerById: async (id: string): Promise<WorkerDetail> => {
+    const response = await apiClient.get<WorkerDetail>(`/workers/${id}`);
     return response.data;
   },
 };

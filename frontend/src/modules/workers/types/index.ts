@@ -10,6 +10,13 @@ export interface Worker {
   created_at: string;
 }
 
+export interface WorkerDetail extends Worker {
+  phone: string;
+  emergency_contact: string | null;
+  contractor_name: string;
+  department_name: string;
+}
+
 // Ensure PaginatedResponse from data-table types is used
 export interface PaginatedResponse<T> {
   items: T[];

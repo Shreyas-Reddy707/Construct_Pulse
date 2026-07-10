@@ -10,6 +10,11 @@ import { DepartmentDirectoryPage } from "@/modules/departments/pages/DepartmentD
 import { ContractorDirectoryPage } from "@/modules/contractors/pages/ContractorDirectoryPage";
 import { VisitorDirectoryPage } from "@/modules/visitors/pages/VisitorDirectoryPage";
 import { KioskPage } from "@/modules/attendance/pages/KioskPage";
+import { WorkerWorkspaceLayout } from "@/modules/workers/pages/workspace/WorkerWorkspaceLayout";
+import { WorkerOverviewTab } from "@/modules/workers/pages/workspace/WorkerOverviewTab";
+import { WorkerAttendanceTab } from "@/modules/workers/pages/workspace/WorkerAttendanceTab";
+import { WorkerSiteAccessTab } from "@/modules/workers/pages/workspace/WorkerSiteAccessTab";
+import { WorkerDocumentsTab } from "@/modules/workers/pages/workspace/WorkerDocumentsTab";
 
 export const router = createBrowserRouter([
   {
@@ -35,7 +40,34 @@ export const router = createBrowserRouter([
           },
           {
             path: "workers",
-            element: <WorkerDirectoryPage />,
+            children: [
+              {
+                index: true,
+                element: <WorkerDirectoryPage />,
+              },
+              {
+                path: ":id",
+                element: <WorkerWorkspaceLayout />,
+                children: [
+                  {
+                    index: true,
+                    element: <WorkerOverviewTab />,
+                  },
+                  {
+                    path: "attendance",
+                    element: <WorkerAttendanceTab />,
+                  },
+                  {
+                    path: "sites",
+                    element: <WorkerSiteAccessTab />,
+                  },
+                  {
+                    path: "documents",
+                    element: <WorkerDocumentsTab />,
+                  },
+                ],
+              },
+            ],
           },
           {
             path: "sites",

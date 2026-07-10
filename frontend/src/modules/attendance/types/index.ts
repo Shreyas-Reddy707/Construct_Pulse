@@ -30,3 +30,12 @@ export interface AttendanceScanResponse {
   message: string;
   worker_name?: string;
 }
+
+export interface AttendanceLog {
+  id: string;
+  worker_id: string;
+  site_id: string;
+  site_name: string;
+  scan_type: ScanMode;
+  timestamp: string;
+}
