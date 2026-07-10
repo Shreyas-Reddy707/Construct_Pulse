@@ -1,9 +1,11 @@
 from fastapi import APIRouter
 from app.api.endpoints import auth, companies, departments, contractors, users, sites, attendance, attendance_governance, occupancy, public, dashboard, safety, qualifications, registration, registrations, emergency_muster, incidents, visitors, safety_operations, safety_communication, planning, notifications, payroll, reporting, configuration
+from app.modules.workers.api.router import router as workers_router
 
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(workers_router, prefix="/workers", tags=["workers"])
 api_router.include_router(companies.router, prefix="/companies", tags=["companies"])
 api_router.include_router(departments.router, prefix="/departments", tags=["departments"])
 api_router.include_router(contractors.router, prefix="/contractors", tags=["contractors"])
