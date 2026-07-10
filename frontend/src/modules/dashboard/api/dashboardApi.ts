@@ -1,13 +1,17 @@
 import { apiClient } from "@/api/client";
-import type { DashboardMetricsResponse, RecentActivityResponse } from "../types";
+import type { DashboardMetricsResponse, RecentActivityResponse, DashboardTrendItem } from "../types";
 import type { 
   BackendDashboardSummary, 
-  BackendRecentActivity
+  BackendRecentActivity,
+  BackendDashboardTrend
 } from "@/api/adapters/dashboard";
 import {
   mapDashboardMetrics, 
-  mapRecentActivity 
+  mapRecentActivity,
+  mapDashboardTrends
 } from "@/api/adapters/dashboard";
+
+const DEFAULT_LOOKBACK_DAYS = 7;
 
 export const dashboardApi = {
   getMetrics: async (): Promise<DashboardMetricsResponse> => {
@@ -22,5 +26,20 @@ export const dashboardApi = {
     return {
       items: response.data.items.map(mapRecentActivity),
     };
+  },
+
+  getTrends: async (): Promise<DashboardTrendItem[]> => {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - DEFAULT_LOOKBACK_DAYS);
+
+    const response = await apiClient.get<BackendDashboardTrend[]>("/dashboard/trends", {
+      params: {
+        start_date: startDate.toISOString(),
+        end_date: endDate.toISOString(),
+      },
+    });
+
+    return response.data.map(mapDashboardTrends);
   },
 };

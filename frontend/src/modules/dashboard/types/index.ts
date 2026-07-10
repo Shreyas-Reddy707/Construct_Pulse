@@ -15,3 +15,10 @@ export interface RecentActivityItem {
 export interface RecentActivityResponse {
   items: RecentActivityItem[];
 }
+
+export interface DashboardTrendItem {
+  date: string;
+  headcount: number;
+  hours: number;
+  corrections: number;
+}

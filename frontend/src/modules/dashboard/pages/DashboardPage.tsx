@@ -5,6 +5,8 @@ import { KpiCard } from "../components/KpiCard";
 import { RecentActivityList } from "../components/RecentActivityList";
 import { useDashboardMetrics } from "../hooks/useDashboardMetrics";
 import { useRecentActivity } from "../hooks/useRecentActivity";
+import { useDashboardTrends } from "../hooks/useDashboardTrends";
+import { DashboardTrendsChart } from "../components/DashboardTrendsChart";
 
 export function DashboardPage() {
   const { 
@@ -23,17 +25,27 @@ export function DashboardPage() {
     dataUpdatedAt: activityUpdatedAt
   } = useRecentActivity();
 
+  const {
+    data: trends,
+    isLoading: trendsLoading,
+    isError: trendsError,
+    isRefetching: trendsRefetching,
+    refetch: refetchTrends,
+    dataUpdatedAt: trendsUpdatedAt
+  } = useDashboardTrends();
+
   const handleManualRefresh = useCallback(async () => {
     // Force a real network request by explicitly calling refetch
     await Promise.all([
       refetchMetrics(),
-      refetchActivity()
+      refetchActivity(),
+      refetchTrends()
     ]);
-  }, [refetchMetrics, refetchActivity]);
+  }, [refetchMetrics, refetchActivity, refetchTrends]);
 
-  // Use the most recent timestamp between the two queries
-  const lastUpdated = Math.max(metricsUpdatedAt || 0, activityUpdatedAt || 0) || undefined;
-  const isRefetching = metricsRefetching || activityRefetching;
+  // Use the most recent timestamp between the queries
+  const lastUpdated = Math.max(metricsUpdatedAt || 0, activityUpdatedAt || 0, trendsUpdatedAt || 0) || undefined;
+  const isRefetching = metricsRefetching || activityRefetching || trendsRefetching;
 
   return (
     <div className="space-y-6">
@@ -65,9 +77,11 @@ export function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
-        <div className="lg:col-span-2 bg-card text-card-foreground shadow-sm border rounded-xl p-6 min-h-[300px] flex items-center justify-center">
-          <p className="text-muted-foreground text-sm">Top Sites chart placeholder</p>
-        </div>
+        <DashboardTrendsChart 
+          data={trends} 
+          isLoading={trendsLoading} 
+          isError={trendsError} 
+        />
         
         <div className="col-span-1 bg-card text-card-foreground shadow-sm border rounded-xl p-6">
           <h3 className="font-semibold mb-4 tracking-tight">Recent Activity</h3>

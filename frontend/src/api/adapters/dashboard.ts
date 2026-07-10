@@ -1,4 +1,4 @@
-import type { DashboardMetricsResponse, RecentActivityItem } from "@/modules/dashboard/types";
+import type { DashboardMetricsResponse, RecentActivityItem, DashboardTrendItem } from "@/modules/dashboard/types";
 
 export interface BackendDashboardSummary {
   total_workers?: number;
@@ -36,5 +36,21 @@ export function mapRecentActivity(backendActivity: BackendRecentActivity): Recen
       ? backendActivity.action 
       : "check_in",
     timestamp: backendActivity.timestamp,
+  };
+}
+
+export interface BackendDashboardTrend {
+  date: string;
+  headcount?: number;
+  hours?: number;
+  corrections?: number;
+}
+
+export function mapDashboardTrends(backendTrend: BackendDashboardTrend): DashboardTrendItem {
+  return {
+    date: backendTrend.date,
+    headcount: backendTrend.headcount || 0,
+    hours: backendTrend.hours || 0,
+    corrections: backendTrend.corrections || 0,
   };
 }
