@@ -1,5 +1,6 @@
 import { apiClient } from "@/api/client";
 import type { Worker, PaginatedResponse } from "../types";
+import { serializeQueryParams } from "@/api/utils";
 
 export const workerApi = {
   getWorkers: async (params: Record<string, string | null>): Promise<PaginatedResponse<Worker>> => {
@@ -8,12 +9,7 @@ export const workerApi = {
     // So we'll pass the params directly to axios.
     
     // Convert object to actual URLSearchParams to clean out nulls and format correctly
-    const searchParams = new URLSearchParams();
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== null && value !== undefined && value !== "") {
-        searchParams.append(key, value);
-      }
-    });
+    const searchParams = serializeQueryParams(params);
 
     const response = await apiClient.get<PaginatedResponse<Worker>>(`/workers?${searchParams.toString()}`);
     return response.data;

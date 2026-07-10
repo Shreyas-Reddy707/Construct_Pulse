@@ -8,6 +8,7 @@ import { WorkerDirectoryPage } from "@/modules/workers/pages/WorkerDirectoryPage
 import { SiteDirectoryPage } from "@/modules/sites/pages/SiteDirectoryPage";
 import { DepartmentDirectoryPage } from "@/modules/departments/pages/DepartmentDirectoryPage";
 import { ContractorDirectoryPage } from "@/modules/contractors/pages/ContractorDirectoryPage";
+import { VisitorDirectoryPage } from "@/modules/visitors/pages/VisitorDirectoryPage";
 
 export const router = createBrowserRouter([
   {
@@ -46,6 +47,10 @@ export const router = createBrowserRouter([
           {
             path: "contractors",
             element: <ContractorDirectoryPage />,
+          },
+          {
+            path: "visitors",
+            element: <VisitorDirectoryPage />,
           },
           // Future protected routes go here
         ],
