@@ -1,8 +1,11 @@
-import { Outlet, Link } from "react-router-dom";
+import { Outlet, Link, useLocation } from "react-router-dom";
 import { useUIStore } from "@/store/useUIStore";
+import { AppHeader } from "@/components/layout/AppHeader";
 
 export function DashboardLayout() {
   const { sidebarOpen } = useUIStore();
+  const location = useLocation();
+  const currentPath = location.pathname;
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -19,22 +22,30 @@ export function DashboardLayout() {
               { path: "/visitors", label: "Visitors" },
               { path: "/kiosk", label: "Attendance" },
               { path: "/reports", label: "Reports" },
-            ].map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className="px-2 py-1.5 rounded-md hover:bg-accent hover:text-accent-foreground text-sm font-medium transition-colors"
-              >
-                {item.label}
-              </Link>
-            ))}
+            ].map((item) => {
+              const isActive = item.path === "/" 
+                ? currentPath === "/"
+                : currentPath.startsWith(item.path);
+
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`px-2 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    isActive 
+                      ? "bg-accent text-accent-foreground font-semibold" 
+                      : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
         </aside>
       )}
-      <div className="flex flex-1 flex-col">
-        <header className="flex h-14 items-center border-b px-4">
-          <p className="font-semibold">Header (Placeholder)</p>
-        </header>
+      <div className="flex flex-1 flex-col min-w-0">
+        <AppHeader />
         <main className="flex-1 p-6">
           <Outlet />
         </main>

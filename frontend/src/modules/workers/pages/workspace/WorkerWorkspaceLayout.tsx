@@ -1,7 +1,6 @@
-import { Outlet, useParams, Link, useLocation } from "react-router-dom";
+import { Outlet, useParams, useLocation, Link } from "react-router-dom";
 import { useWorker } from "../../hooks/useWorker";
-import { WorkerSidebar } from "../../components/workspace/WorkerSidebar";
-import { ChevronRight, ArrowLeft } from "lucide-react";
+import { WorkerWorkspaceHeader } from "../../components/workspace/WorkerWorkspaceHeader";
 
 export function WorkerWorkspaceLayout() {
   const { id } = useParams<{ id: string }>();
@@ -19,26 +18,13 @@ export function WorkerWorkspaceLayout() {
   const currentPath = location.pathname;
 
   return (
-    <div className="space-y-6 pb-10">
-      {/* Breadcrumb / Top Bar */}
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link to="/workers" className="hover:text-foreground flex items-center transition-colors">
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Workers
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <span className="text-foreground font-medium">Worker Workspace</span>
-      </div>
-
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Sidebar for Identity and Status */}
-        <WorkerSidebar worker={worker} isLoading={isLoading} />
-
-        {/* Main Workspace Content Area */}
-        <div className="flex-1 w-full flex flex-col min-w-0">
-          {/* Scrollable Tabs for Mobile Support */}
-          <div className="overflow-x-auto pb-4 border-b scrollbar-hide">
-            <nav className="flex space-x-6 min-w-max px-1">
+    <div className="flex flex-col min-h-screen bg-background -mx-6 -mt-6">
+      <WorkerWorkspaceHeader worker={worker} isLoading={isLoading} />
+      
+      <div className="flex-1 w-full flex flex-col min-w-0">
+        <div className="sticky top-[73px] sm:top-[113px] z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <div className="px-6">
+            <nav className="flex space-x-6 overflow-x-auto scrollbar-hide">
               {tabs.map((tab) => {
                 // Exact match for Overview since it's the index, otherwise prefix match
                 const isActive = tab.name === "Overview" 
@@ -49,7 +35,7 @@ export function WorkerWorkspaceLayout() {
                   <Link
                     key={tab.name}
                     to={tab.path}
-                    className={`whitespace-nowrap py-2 border-b-2 font-medium text-sm transition-colors ${
+                    className={`whitespace-nowrap py-3 border-b-2 font-medium text-sm transition-colors ${
                       isActive
                         ? "border-primary text-primary"
                         : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
@@ -61,11 +47,10 @@ export function WorkerWorkspaceLayout() {
               })}
             </nav>
           </div>
+        </div>
 
-          {/* Tab Content Router Outlet */}
-          <div className="mt-6">
-            <Outlet context={{ worker, isLoading }} />
-          </div>
+        <div className="p-6">
+          <Outlet context={{ worker, isLoading }} />
         </div>
       </div>
     </div>
