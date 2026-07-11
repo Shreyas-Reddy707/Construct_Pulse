@@ -37,7 +37,7 @@ export function mapWorker(backendWorker: BackendUserResponse): Worker {
     role: backendWorker.role || "worker",
     department: backendWorker.department_name || "Unassigned",
     current_site: backendWorker.assigned_site_names || null,
-    status: (backendWorker.status?.toLowerCase() as Worker["status"]) || "active",
+    status: (backendWorker.status?.toLowerCase() as Worker["status"]) || "approved",
     created_at: backendWorker.created_at || new Date().toISOString(),
   };
 }
@@ -51,7 +51,7 @@ export function mapWorkerDetail(backendWorker: BackendWorkerDetailResponse): Wor
     role: "worker", // Not in detail response
     department: backendWorker.department?.name || "Unassigned",
     current_site: null, // Not in detail response
-    status: (backendWorker.status?.toLowerCase() as Worker["status"]) || "active",
+    status: (backendWorker.status?.toLowerCase() as Worker["status"]) || "approved",
     created_at: new Date().toISOString(), // Not in detail response
     phone: backendWorker.phone || "",
     emergency_contact: backendWorker.emergency_contact || null,

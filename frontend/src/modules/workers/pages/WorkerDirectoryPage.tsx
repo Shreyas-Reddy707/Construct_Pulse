@@ -16,7 +16,7 @@ const workerTableConfig: DataTableConfig = {
       id: "status",
       title: "Status",
       options: [
-        { label: "Active", value: "active" },
+        { label: "Approved", value: "approved" },
         { label: "Suspended", value: "suspended" },
         { label: "Pending", value: "pending" },
       ],

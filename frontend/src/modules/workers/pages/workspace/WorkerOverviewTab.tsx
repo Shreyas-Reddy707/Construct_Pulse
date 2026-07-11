@@ -2,6 +2,7 @@ import { useOutletContext } from "react-router-dom";
 import type { WorkerDetail } from "../../types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar, Briefcase, Hash } from "lucide-react";
+import { WorkerActions } from "../../components/workspace/WorkerActions";
 
 export function WorkerOverviewTab() {
   const { worker, isLoading } = useOutletContext<{ worker?: WorkerDetail, isLoading: boolean }>();
@@ -16,6 +17,14 @@ export function WorkerOverviewTab() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Left side: Core Employment Details */}
       <div className="lg:col-span-2 space-y-6">
+        <div className="bg-card text-card-foreground shadow-sm border rounded-xl p-6 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+          <div>
+            <h3 className="font-semibold tracking-tight text-lg">Manage Worker</h3>
+            <p className="text-sm text-muted-foreground">Approve, reject, or suspend site access.</p>
+          </div>
+          <WorkerActions worker={worker} />
+        </div>
+
         <div className="bg-card text-card-foreground shadow-sm border rounded-xl p-6">
           <h3 className="font-semibold tracking-tight text-lg mb-4">Employment Details</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">

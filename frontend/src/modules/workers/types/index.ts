@@ -6,7 +6,7 @@ export interface Worker {
   role: string;
   department: string;
   current_site: string | null;
-  status: "active" | "suspended" | "pending";
+  status: "pending" | "approved" | "rejected" | "suspended";
   created_at: string;
 }
 
