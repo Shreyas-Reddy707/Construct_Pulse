@@ -1,5 +1,10 @@
 import type { ScanMode, AttendanceScanPayload, AttendanceScanResponse } from "../types";
 
+const DEFAULT_GPS = {
+  gps_latitude: 0.0,
+  gps_longitude: 0.0,
+};
+
 class ScannerService {
   private scanDebounceCache: Map<string, number> = new Map();
   private DEBOUNCE_MS = 3000;
@@ -27,10 +32,11 @@ class ScannerService {
     try {
       // We pass the actual API invocation from the React component (which holds React Query context)
       const payload: AttendanceScanPayload = {
-        worker_id: qrData,
         site_id: siteId,
+        qr_token: qrData,
+        gps_latitude: DEFAULT_GPS.gps_latitude,
+        gps_longitude: DEFAULT_GPS.gps_longitude,
         scan_type: mode,
-        timestamp: new Date().toISOString(),
       };
 
       const result = await submitMutation(payload);

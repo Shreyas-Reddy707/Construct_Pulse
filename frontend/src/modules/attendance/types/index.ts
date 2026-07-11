@@ -19,10 +19,11 @@ export interface ScanResult {
 }
 
 export interface AttendanceScanPayload {
-  worker_id: string;
   site_id: string;
+  qr_token: string;
+  gps_latitude: number;
+  gps_longitude: number;
   scan_type: ScanMode;
-  timestamp: string;
 }
 
 export interface AttendanceScanResponse {

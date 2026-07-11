@@ -20,9 +20,10 @@ export const attendanceApi = {
       const endpoint = payload.scan_type === "check_in" ? "/attendance/check-in" : "/attendance/check-out";
       
       const backendPayload = {
-        user_id: payload.worker_id,
         site_id: payload.site_id,
-        method: "QR_SCAN",
+        qr_token: payload.qr_token,
+        gps_latitude: payload.gps_latitude,
+        gps_longitude: payload.gps_longitude,
       };
 
       const response = await apiClient.post<BackendAttendanceResponse>(endpoint, backendPayload);
