@@ -12,6 +12,8 @@ import { DepartmentDirectoryPage } from "@/modules/departments/pages/DepartmentD
 import { ContractorDirectoryPage } from "@/modules/contractors/pages/ContractorDirectoryPage";
 import { VisitorDirectoryPage } from "@/modules/visitors/pages/VisitorDirectoryPage";
 import { KioskPage } from "@/modules/attendance/pages/KioskPage";
+import { ReportDirectoryPage } from "@/modules/reporting/pages/ReportDirectoryPage";
+import { ReportDetailPage } from "@/modules/reporting/pages/ReportDetailPage";
 import { WorkerWorkspaceLayout } from "@/modules/workers/pages/workspace/WorkerWorkspaceLayout";
 import { WorkerOverviewTab } from "@/modules/workers/pages/workspace/WorkerOverviewTab";
 import { WorkerAttendanceTab } from "@/modules/workers/pages/workspace/WorkerAttendanceTab";
@@ -219,6 +221,19 @@ export const router = createBrowserRouter([
           {
             path: "kiosk",
             element: <KioskPage />,
+          },
+          {
+            path: "reports",
+            children: [
+              {
+                index: true,
+                element: <ReportDirectoryPage />,
+              },
+              {
+                path: ":id",
+                element: <ReportDetailPage />,
+              },
+            ],
           },
           // Future protected routes go here
         ],
