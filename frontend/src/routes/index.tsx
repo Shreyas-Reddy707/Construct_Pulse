@@ -5,6 +5,7 @@ import { AuthLayout } from "@/layouts/AuthLayout";
 import { DashboardLayout } from "@/layouts/DashboardLayout";
 import { AuthGuard } from "./AuthGuard";
 import { LoginPage } from "@/modules/auth/pages/LoginPage";
+import { RegisterPage } from "@/modules/auth/pages/RegisterPage";
 import { DashboardPage } from "@/modules/dashboard/pages/DashboardPage";
 import { WorkerDirectoryPage } from "@/modules/workers/pages/WorkerDirectoryPage";
 import { SiteDirectoryPage } from "@/modules/sites/pages/SiteDirectoryPage";
@@ -56,6 +57,16 @@ export const router = createBrowserRouter([
       {
         index: true,
         element: <LoginPage />,
+      },
+    ],
+  },
+  {
+    path: "/register",
+    element: <AuthLayout />,
+    children: [
+      {
+        index: true,
+        element: <RegisterPage />,
       },
     ],
   },

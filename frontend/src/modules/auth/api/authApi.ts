@@ -1,6 +1,6 @@
 import { apiClient } from "@/api/client";
 import type { AuthResponse, User } from "../types";
-import type { LoginFormValues } from "../validation";
+import type { LoginFormValues, RegistrationFormValues } from "../validation";
 import { authService } from "@/services/authService";
 import { env } from "@/config/environment";
 
@@ -8,21 +8,16 @@ export const authApi = {
   login: async (credentials: LoginFormValues): Promise<AuthResponse> => {
     let idToken = "";
 
-    // In a real production app, we would authenticate with Firebase Client SDK here:
-    // const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
-    // idToken = await userCredential.user.getIdToken();
-    
-    // For MVP with DEMO_AUTH enabled on the backend, we bypass real Firebase
     const useDemoAuth = env.enableDemoAuth;
 
     if (useDemoAuth) {
       // The backend DEMO_AUTH mode expects "DEMO_TOKEN_" + identifier. 
-      // We map the login email directly to this for demo purposes.
-      idToken = `DEMO_TOKEN_${credentials.email}`;
+      idToken = `DEMO_TOKEN_${credentials.phone}`;
     } else {
       // FUTURE PRODUCTION REPLACEMENT:
-      // const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
-      // idToken = await userCredential.user.getIdToken();
+      // const confirmationResult = await signInWithPhoneNumber(auth, credentials.phone, appVerifier);
+      // const result = await confirmationResult.confirm(credentials.otp);
+      // idToken = await result.user.getIdToken();
       throw new Error("Real Firebase Auth is not yet configured in this MVP.");
     }
 
@@ -31,6 +26,10 @@ export const authApi = {
     });
     
     return response.data;
+  },
+
+  registerRequest: async (data: RegistrationFormValues & { qr_token: string }): Promise<void> => {
+    await apiClient.post("/register/request", data);
   },
 
   me: async (): Promise<User> => {
@@ -42,3 +41,4 @@ export const authApi = {
     authService.removeToken();
   },
 };
+

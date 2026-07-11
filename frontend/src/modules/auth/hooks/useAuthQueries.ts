@@ -17,6 +17,12 @@ export function useLoginMutation() {
   });
 }
 
+export function useRegisterMutation() {
+  return useMutation({
+    mutationFn: authApi.registerRequest,
+  });
+}
+
 export function useCurrentUser() {
   const { isAuthenticated } = useAuth();
   
