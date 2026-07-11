@@ -1,57 +1,29 @@
-import { useMemo } from "react";
-import { DataTable } from "@/components/data-table/DataTable";
-import { useSites } from "@/modules/sites/hooks/useSites";
-import { siteColumns } from "@/modules/sites/columns/siteColumns";
-import type { DataTableConfig } from "@/components/data-table/types";
-
-const contractorSiteTableConfig: DataTableConfig = {
-  enableRowSelection: false,
-  enableColumnVisibility: true,
-  mobileBehavior: "scroll",
-  searchableFields: [
-    { id: "search", placeholder: "Search assigned sites..." }
-  ],
-  filterableColumns: [
-    {
-      id: "status",
-      title: "Status",
-      options: [
-        { label: "Active", value: "active" },
-        { label: "Pre-construction", value: "pre-construction" },
-        { label: "Paused", value: "paused" },
-        { label: "Completed", value: "completed" },
-        { label: "Handover", value: "handover" },
-      ],
-    }
-  ],
-};
+import { Building2, Info } from "lucide-react";
 
 export default function ContractorSitesTab() {
-  // Relying on searchParams for filtering, similar to Worker list composition.
-  const { data, isLoading, isError, refetch } = useSites();
-
-  const columns = useMemo(() => siteColumns, []);
-
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="font-semibold tracking-tight text-lg">Active Sites</h3>
+        <h3 className="font-semibold tracking-tight text-lg flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-primary" />
+          Active Sites
+        </h3>
         <p className="text-sm text-muted-foreground">
           Geographic locations where this contractor is actively authorized to operate.
         </p>
       </div>
 
-      <div className="bg-card shadow-sm border rounded-xl overflow-hidden">
-        <DataTable
-          columns={columns}
-          data={data?.items ?? []}
-          pageCount={data?.total_pages ?? 0}
-          totalRows={data?.total ?? 0}
-          isLoading={isLoading}
-          isError={isError}
-          onRetry={refetch}
-          config={contractorSiteTableConfig}
-        />
+      <div className="bg-card border rounded-xl py-20 flex flex-col items-center justify-center text-center space-y-4">
+        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+          <Info className="w-8 h-8" />
+        </div>
+        <div className="max-w-md px-4">
+          <h4 className="font-medium text-lg">Contractor Site Tracking</h4>
+          <p className="text-sm text-muted-foreground mt-2">
+            The active sites view is intentionally deferred. Contractor-scoped site visibility will be available 
+            in a future API unfreeze sprint when the backend is extended to support efficient contractor querying.
+          </p>
+        </div>
       </div>
     </div>
   );

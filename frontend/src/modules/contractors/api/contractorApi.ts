@@ -23,7 +23,7 @@ export const contractorApi = {
   },
 
   getContractorById: async (id: string): Promise<ContractorDetail> => {
-    const response = await apiClient.get<BackendContractorResponse>(`/contractors/${id}`);
+    const response = await apiClient.get<BackendContractorResponse>(`/contractors/${id}/workspace`);
     
     return mapContractorDetail(response.data);
   },

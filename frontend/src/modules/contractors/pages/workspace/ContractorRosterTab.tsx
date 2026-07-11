@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useParams } from "react-router-dom";
 import { DataTable } from "@/components/data-table/DataTable";
 import { useWorkers } from "@/modules/workers/hooks/useWorkers";
 import { workerColumns } from "@/modules/workers/columns/workerColumns";
@@ -35,9 +36,10 @@ const contractorWorkerTableConfig: DataTableConfig = {
 };
 
 export default function ContractorRosterTab() {
-  // Uses searchParams. The backend API handles the contractor filter 
-  // via query params naturally if navigated here correctly.
-  const { data, isLoading, isError, refetch } = useWorkers();
+  const { id } = useParams<{ id: string }>();
+  // Pass contractor_id to the generic useWorkers hook to safely scope the data
+  // preventing global worker fetch data bleed.
+  const { data, isLoading, isError, refetch } = useWorkers({ contractor_id: id! });
 
   const columns = useMemo(() => workerColumns, []);
 
