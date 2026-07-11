@@ -23,7 +23,7 @@ export const departmentApi = {
   },
 
   getDepartmentById: async (id: string): Promise<DepartmentDetail> => {
-    const response = await apiClient.get<BackendDepartmentResponse>(`/departments/${id}`);
+    const response = await apiClient.get<BackendDepartmentResponse>(`/departments/${id}/workspace`);
     
     return mapDepartmentDetail(response.data);
   },
