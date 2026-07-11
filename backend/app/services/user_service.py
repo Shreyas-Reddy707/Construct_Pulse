@@ -7,13 +7,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 class UserService:
-    SEARCH_FIELDS = [User.first_name, User.last_name, User.email]
+    SEARCH_FIELDS = [User.name, User.employee_id, User.phone_number]
+    
     SORTABLE_FIELDS = {
-        "name": User.last_name,
-        "email": User.email,
+        "name": User.name,
         "status": User.status,
         "role": User.role,
-        "created_at": User.created_at,
+        "phone_number": User.phone_number,
+        "employee_id": User.employee_id,
     }
 
     @classmethod
@@ -48,8 +49,8 @@ class UserService:
             query.sort_by, 
             query.sort_order, 
             cls.SORTABLE_FIELDS, 
-            default_sort_field="created_at",
-            default_sort_order="desc"
+            default_sort_field="name",
+            default_sort_order="asc"
         )
         
         items = db_query.offset(query.skip).limit(query.limit).all()

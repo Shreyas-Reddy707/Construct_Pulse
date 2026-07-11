@@ -341,8 +341,8 @@ class User(SoftDeleteMixin, Base):
 
 
     company = relationship("Company", back_populates="users")
-    department = relationship("Department", back_populates="users")
-    contractor = relationship("Contractor", back_populates="users")
+    department = relationship("Department", back_populates="users", foreign_keys="[User.department_id]")
+    contractor = relationship("Contractor", back_populates="users", foreign_keys="[User.contractor_id]")
     attendances = relationship("Attendance", back_populates="user")
     assigned_sites = relationship("Site", secondary=worker_to_site, back_populates="assigned_workers")
 

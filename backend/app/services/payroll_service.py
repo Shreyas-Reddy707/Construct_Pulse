@@ -226,7 +226,7 @@ class PayrollService:
                 total_hours=total_hours,
                 base_rate=base_rate,
                 total_amount=total_amount,
-                worker_name=f"{user.first_name} {user.last_name}",
+                worker_name=user.name,
                 employee_number=user.employee_number or "N/A",
                 department_name=department.name if department else "N/A",
                 contractor_name=contractor.name if contractor else None

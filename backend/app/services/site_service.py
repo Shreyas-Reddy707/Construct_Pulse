@@ -10,10 +10,9 @@ import math
 from typing import List
 
 class SiteService:
-    SEARCH_FIELDS = [Site.name, Site.city, Site.state]
+    SEARCH_FIELDS = [Site.name, Site.address, Site.municipality]
     SORTABLE_FIELDS = {
         "name": Site.name,
-        "city": Site.city,
         "status": Site.status,
         "created_at": Site.created_at,
     }

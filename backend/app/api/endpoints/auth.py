@@ -67,6 +67,7 @@ def login(login_data: schemas.FirebaseLogin, db: Session = Depends(get_db)):
         last_activity=datetime.utcnow()
     )
     db.add(new_session)
+    db.commit()
 
     claims = {
         "company_id": user.company_id,

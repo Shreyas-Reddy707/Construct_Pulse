@@ -15,12 +15,12 @@ from app.services.identity_mapper import IdentityMapper
 from app.core.exceptions import ResourceNotFoundException, StateTransitionException, ConflictException, AuthorizationException
 
 class ApprovalService:
-    SEARCH_FIELDS = [RegistrationRequest.worker_first_name, RegistrationRequest.worker_last_name, RegistrationRequest.worker_email]
+    SEARCH_FIELDS = [RegistrationRequest.full_name, RegistrationRequest.phone_number, RegistrationRequest.email]
     SORTABLE_FIELDS = {
-        "name": RegistrationRequest.worker_last_name,
-        "email": RegistrationRequest.worker_email,
+        "name": RegistrationRequest.full_name,
+        "email": RegistrationRequest.email,
         "status": RegistrationRequest.status,
-        "created_at": RegistrationRequest.created_at,
+        "created_at": RegistrationRequest.submitted_at,
     }
 
     @classmethod

@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 from app.models.models import User
-from .worker_dto import WorkerDetailResponse, DepartmentReference, ContractorReference
+from ..schemas.worker_dto import WorkerDetailResponse, DepartmentReference, ContractorReference
 from ..repositories.worker_repo import WorkerRepository
 
 class WorkerService:
