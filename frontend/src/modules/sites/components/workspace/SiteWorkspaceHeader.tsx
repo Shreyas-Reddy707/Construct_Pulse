@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { SiteDetail } from "../../types";
 import { StatusBadgeCell } from "@/components/data-table/cells/StatusBadgeCell";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SiteActions } from "./SiteActions";
 
 interface SiteWorkspaceHeaderProps {
   site?: SiteDetail;
@@ -66,6 +67,11 @@ export function SiteWorkspaceHeader({ site, isLoading }: SiteWorkspaceHeaderProp
               {Math.round((site.current_occupancy / site.max_occupancy) * 100)}%
             </p>
           </div>
+        </div>
+
+        {/* Far Right: Actions */}
+        <div className="flex items-center">
+          <SiteActions site={site} />
         </div>
       </div>
     </div>

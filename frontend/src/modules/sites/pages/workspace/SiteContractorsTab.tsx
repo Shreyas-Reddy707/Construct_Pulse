@@ -1,6 +1,7 @@
 import { useMemo } from "react";
+import { useParams } from "react-router-dom";
 import { DataTable } from "@/components/data-table/DataTable";
-import { useContractors } from "@/modules/contractors/hooks/useContractors";
+import { useSiteAssignments } from "../../hooks/useSiteAssignments";
 import { contractorColumns } from "@/modules/contractors/columns/contractorColumns";
 import type { DataTableConfig } from "@/components/data-table/types";
 
@@ -25,10 +26,11 @@ const siteContractorTableConfig: DataTableConfig = {
 };
 
 export default function SiteContractorsTab() {
-  // Reusing existing hook directly
-  const { data, isLoading, isError, refetch } = useContractors();
+  const { id } = useParams<{ id: string }>();
+  const { data, isLoading, isError, refetch } = useSiteAssignments(id);
 
   const columns = useMemo(() => contractorColumns, []);
+  const contractors = data?.contractors ?? [];
 
   return (
     <div className="space-y-4">
@@ -42,9 +44,9 @@ export default function SiteContractorsTab() {
       <div className="bg-card shadow-sm border rounded-xl overflow-hidden">
         <DataTable
           columns={columns}
-          data={data?.items ?? []}
-          pageCount={data?.total_pages ?? 0}
-          totalRows={data?.total ?? 0}
+          data={contractors}
+          pageCount={1}
+          totalRows={contractors.length}
           isLoading={isLoading}
           isError={isError}
           onRetry={refetch}

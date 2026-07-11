@@ -1,7 +1,9 @@
 import { useMemo } from "react";
+import { useParams } from "react-router-dom";
 import { DataTable } from "@/components/data-table/DataTable";
-import { useWorkers } from "@/modules/workers/hooks/useWorkers";
+import { useSiteAssignments } from "../../hooks/useSiteAssignments";
 import { workerColumns } from "@/modules/workers/columns/workerColumns";
+import { AssignWorkerDialog } from "../../components/workspace/AssignWorkerDialog";
 import type { DataTableConfig } from "@/components/data-table/types";
 
 const siteWorkerTableConfig: DataTableConfig = {
@@ -35,28 +37,30 @@ const siteWorkerTableConfig: DataTableConfig = {
 };
 
 export default function SiteRosterTab() {
-  // Reusing the domain hook from workers. 
-  // Note: in a fully wired app, the hook might need an initial filter prop for `site_id`,
-  // but per architectural rules, we compose existing hooks natively.
-  const { data, isLoading, isError, refetch } = useWorkers();
+  const { id } = useParams<{ id: string }>();
+  const { data, isLoading, isError, refetch } = useSiteAssignments(id);
 
   const columns = useMemo(() => workerColumns, []);
+  const workers = data?.workers ?? [];
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="font-semibold tracking-tight text-lg">Live Roster</h3>
-        <p className="text-sm text-muted-foreground">
-          Workers currently assigned or checked into this site.
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="font-semibold tracking-tight text-lg">Live Roster</h3>
+          <p className="text-sm text-muted-foreground">
+            Workers currently assigned to this site.
+          </p>
+        </div>
+        <AssignWorkerDialog siteId={id!} />
       </div>
 
       <div className="bg-card shadow-sm border rounded-xl overflow-hidden">
         <DataTable
           columns={columns}
-          data={data?.items ?? []}
-          pageCount={data?.total_pages ?? 0}
-          totalRows={data?.total ?? 0}
+          data={workers}
+          pageCount={1}
+          totalRows={workers.length}
           isLoading={isLoading}
           isError={isError}
           onRetry={refetch}
