@@ -14,8 +14,8 @@ class FirebaseLogin(BaseModel):
     token: str
 
 class UserBase(BaseModel):
-    phone_number: str
-    name: str
+    phone_number: Optional[str] = None
+    name: Optional[str] = None
     role: UserRole = UserRole.WORKER
     employee_id: Optional[str] = None
 

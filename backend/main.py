@@ -30,54 +30,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-import os
-from sqlalchemy.orm import Session
-from app.db.database import SessionLocal
-from app.models.models import Company, Department, Contractor
-
 app.include_router(api_router, prefix=settings.API_V1_STR)
-
-@app.on_event("startup")
-def startup_event():
-    db: Session = SessionLocal()
-    try:
-        # Check if demo data needs to be seeded
-        company = db.query(Company).filter(Company.company_name == "Demo Company").first()
-        if not company:
-            company = Company(
-                id="demo_company",
-                name="Demo Company",
-                address="123 Builder Lane",
-                phone="1234567890"
-            )
-            db.add(company)
-            db.commit()
-            db.refresh(company)
-
-        department = db.query(Department).filter(Department.id == "d3").first()
-        if not department:
-            department = Department(
-                id="d3",
-                company_id=company.id,
-                name="Electrical",
-                description="Demo Department"
-            )
-            db.add(department)
-
-        contractor = db.query(Contractor).filter(Contractor.id == "c1").first()
-        if not contractor:
-            contractor = Contractor(
-                id="c1",
-                company_id=company.id,
-                name="Demo Contractor",
-                phone="9999999999",
-                trade="Electrical"
-            )
-            db.add(contractor)
-        
-        db.commit()
-    finally:
-        db.close()
 
 @app.get("/")
 def root():

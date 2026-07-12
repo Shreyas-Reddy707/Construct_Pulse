@@ -59,28 +59,63 @@ class PendingWorkersScreen extends ConsumerWidget {
                     final worker = workers[index];
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: const BorderSide(color: AppColors.border),
+                      ),
+                      elevation: 0,
                       child: Padding(
                         padding: const EdgeInsets.all(16),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              '${worker.firstName} ${worker.lastName}',
-                              style: AppTypography.h3,
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                CircleAvatar(
+                                  radius: 24,
+                                  backgroundColor: AppColors.primaryLight,
+                                  backgroundImage: worker.profilePhoto != null ? NetworkImage(worker.profilePhoto!) : null,
+                                  child: worker.profilePhoto == null
+                                      ? Text(worker.initials, style: AppTypography.bodySmall.copyWith(color: AppColors.primaryDark))
+                                      : null,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(worker.fullName, style: AppTypography.h3),
+                                      const SizedBox(height: 4),
+                                      Text(worker.phone, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                                      if (worker.role.value.isNotEmpty)
+                                        Container(
+                                          margin: const EdgeInsets.only(top: 8),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(color: AppColors.surfaceVariant, borderRadius: BorderRadius.circular(8)),
+                                          child: Text('Role: ${worker.role.value}', style: AppTypography.caption.copyWith(fontWeight: FontWeight.w600)),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              worker.phone,
-                              style: AppTypography.bodySmall,
-                            ),
+                            const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1)),
+                            _infoRow(Icons.business, 'Company', worker.companyName ?? 'Demo Company'),
+                            if (worker.departmentName != null) _infoRow(Icons.domain, 'Department', worker.departmentName!),
+                            if (worker.contractorName != null) _infoRow(Icons.handyman, 'Contractor', worker.contractorName!),
+                            if (worker.emergencyContactName != null) 
+                              _infoRow(Icons.emergency, 'Emergency Contact', '${worker.emergencyContactName} (${worker.emergencyContactPhone ?? ''})'),
+                            if (worker.createdAt != null) 
+                              _infoRow(Icons.calendar_today, 'Applied Date', worker.createdAt.toString().split(' ')[0]),
+                            if (worker.assignedSiteNames != null && worker.assignedSiteNames!.isNotEmpty) 
+                              _infoRow(Icons.location_on, 'Assigned Sites', worker.assignedSiteNames!),
                             const SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
                                   child: OutlinedButton(
-                                    onPressed: actionState.isLoading
-                                        ? null
-                                        : () => ref.read(workerActionNotifierProvider.notifier).reject(worker.id),
+                                    onPressed: actionState.isLoading ? null : () => ref.read(workerActionNotifierProvider.notifier).reject(worker.id),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: AppColors.danger,
                                       side: const BorderSide(color: AppColors.danger),
@@ -92,9 +127,7 @@ class PendingWorkersScreen extends ConsumerWidget {
                                 Expanded(
                                   child: PrimaryButton(
                                     text: 'Approve',
-                                    onPressed: actionState.isLoading
-                                        ? null
-                                        : () => ref.read(workerActionNotifierProvider.notifier).approve(worker.id),
+                                    onPressed: actionState.isLoading ? null : () => ref.read(workerActionNotifierProvider.notifier).approve(worker.id),
                                   ),
                                 ),
                               ],
@@ -120,6 +153,30 @@ class PendingWorkersScreen extends ConsumerWidget {
         },
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (err, stack) => Center(child: Text('Error: $err')),
+      ),
+    );
+  }
+
+  Widget _infoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 16, color: AppColors.textTertiary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: AppTypography.bodySmall,
+                children: [
+                  TextSpan(text: '$label: ', style: const TextStyle(color: AppColors.textTertiary)),
+                  TextSpan(text: value, style: const TextStyle(color: AppColors.textPrimary)),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

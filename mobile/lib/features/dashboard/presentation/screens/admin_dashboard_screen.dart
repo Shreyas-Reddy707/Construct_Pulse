@@ -9,7 +9,8 @@ import '../../../../core/widgets/kpi_card.dart';
 import '../../../../core/network/api_client.dart';
 import '../../../attendance/presentation/providers/attendance_providers.dart';
 
-final adminDashboardSummaryProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+final adminDashboardSummaryProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
   final dio = ref.read(dioProvider);
   final response = await dio.get('/dashboard/summary');
   return response.data as Map<String, dynamic>;
@@ -45,36 +46,50 @@ class AdminDashboardScreen extends ConsumerWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: GestureDetector(
-                              onTap: () => context.push('/workforce'),
-                              child: KpiCard(label: 'Total Workers', value: data['total_workers'].toString(), icon: Icons.people_rounded, iconColor: AppColors.primary),
-                            )
-                          ),
+                              child: GestureDetector(
+                            onTap: () => context.push('/workforce'),
+                            child: KpiCard(
+                                label: 'Total Workers',
+                                value: data['total_workers'].toString(),
+                                icon: Icons.people_rounded,
+                                iconColor: AppColors.primary),
+                          )),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: GestureDetector(
-                              onTap: () => context.push('/pending-workers'),
-                              child: KpiCard(label: 'Pending', value: data['pending_workers'].toString(), icon: Icons.pending_actions_rounded, iconColor: AppColors.warning),
-                            )
-                          ),
+                              child: GestureDetector(
+                            onTap: () => context.push('/pending-workers'),
+                            child: KpiCard(
+                                label: 'Pending',
+                                value: data['pending_workers'].toString(),
+                                icon: Icons.pending_actions_rounded,
+                                iconColor: AppColors.warning),
+                          )),
                         ],
                       ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
-                            child: GestureDetector(
-                              onTap: () => context.push('/workforce?status=approved'),
-                              child: KpiCard(label: 'Approved', value: data['approved_workers'].toString(), icon: Icons.check_circle_rounded, iconColor: AppColors.success),
-                            )
-                          ),
+                              child: GestureDetector(
+                            onTap: () =>
+                                context.push('/workforce?status=approved'),
+                            child: KpiCard(
+                                label: 'Approved',
+                                value: data['approved_workers'].toString(),
+                                icon: Icons.check_circle_rounded,
+                                iconColor: AppColors.success),
+                          )),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: GestureDetector(
-                              onTap: () => context.push('/workforce?status=suspended'),
-                              child: KpiCard(label: 'Suspended', value: data['suspended_workers'].toString(), icon: Icons.block_rounded, iconColor: AppColors.danger),
-                            )
-                          ),
+                              child: GestureDetector(
+                            onTap: () =>
+                                context.push('/workforce?status=suspended'),
+                            child: KpiCard(
+                                label: 'Suspended',
+                                value: data['suspended_workers'].toString(),
+                                icon: Icons.block_rounded,
+                                iconColor: AppColors.danger),
+                          )),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -83,129 +98,194 @@ class AdminDashboardScreen extends ConsumerWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: GestureDetector(
-                              onTap: () => context.push('/attendance-live'),
-                              child: KpiCard(label: 'Currently On Site', value: data['workers_on_site'].toString(), icon: Icons.engineering_rounded, iconColor: AppColors.primary),
-                            )
-                          ),
+                              child: GestureDetector(
+                            onTap: () => context.push('/attendance-live'),
+                            child: KpiCard(
+                                label: 'Currently On Site',
+                                value: data['workers_on_site'].toString(),
+                                icon: Icons.engineering_rounded,
+                                iconColor: AppColors.primary),
+                          )),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: GestureDetector(
-                              onTap: () => context.push('/attendance-live'),
-                              child: KpiCard(label: 'Checked In Today', value: data['checked_in_today'].toString(), icon: Icons.login_rounded, iconColor: AppColors.success),
-                            )
-                          ),
+                              child: GestureDetector(
+                            onTap: () => context.push('/attendance-live'),
+                            child: KpiCard(
+                                label: 'Checked In Today',
+                                value: data['checked_in_today'].toString(),
+                                icon: Icons.login_rounded,
+                                iconColor: AppColors.success),
+                          )),
                         ],
                       ),
                       const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
-                            child: GestureDetector(
-                              onTap: () => context.push('/attendance-history'),
-                              child: KpiCard(label: 'Completed Shifts', value: data['checked_out_today'].toString(), icon: Icons.logout_rounded, iconColor: AppColors.surfaceVariant),
-                            )
-                          ),
+                              child: GestureDetector(
+                            onTap: () => context.push('/attendance-history'),
+                            child: KpiCard(
+                                label: 'Completed Shifts',
+                                value: data['checked_out_today'].toString(),
+                                icon: Icons.logout_rounded,
+                                iconColor: AppColors.surfaceVariant),
+                          )),
                           const SizedBox(width: 12),
-                          Expanded(child: Container()), // Empty space to keep sizing consistent
+                          Expanded(
+                              child:
+                                  Container()), // Empty space to keep sizing consistent
                         ],
                       ),
                       const SizedBox(height: 16),
-                      Text('Currently On Site Preview', style: AppTypography.body.copyWith(fontWeight: FontWeight.bold)),
+                      Text('Currently On Site Preview',
+                          style: AppTypography.body
+                              .copyWith(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Consumer(
                         builder: (context, ref, child) {
                           return ref.watch(liveAttendanceProvider).when(
-                            data: (live) {
-                              if (live.isEmpty) return const Text('No active workers.');
-                              final displayed = live.take(3).toList();
-                              final remaining = live.length - displayed.length;
-                              return Card(
-                                elevation: 0,
-                                color: AppColors.surface,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: const BorderSide(color: AppColors.border),
-                                ),
-                                child: Column(
-                                  children: [
-                                    ...displayed.map((a) => ListTile(
-                                          leading: const CircleAvatar(
-                                            backgroundColor: AppColors.primarySurface,
-                                            child: Icon(Icons.person, color: AppColors.primary, size: 20),
+                                data: (live) {
+                                  if (live.isEmpty)
+                                    return const Text('No active workers.');
+                                  final displayed = live.take(3).toList();
+                                  final remaining =
+                                      live.length - displayed.length;
+                                  return Card(
+                                    elevation: 0,
+                                    color: AppColors.surface,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      side: const BorderSide(
+                                          color: AppColors.border),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        ...displayed.map((a) => ListTile(
+                                              leading: const CircleAvatar(
+                                                backgroundColor:
+                                                    AppColors.primarySurface,
+                                                child: Icon(Icons.person,
+                                                    color: AppColors.primary,
+                                                    size: 20),
+                                              ),
+                                              title: Text(
+                                                  a.userName ?? 'Unknown',
+                                                  style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w600)),
+                                              subtitle: Text(
+                                                  '${a.siteName ?? 'Unknown'} · Checked In: ${DateFormat('HH:mm').format(a.checkInTime)}'),
+                                            )),
+                                        if (remaining > 0)
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 8),
+                                            child: Text(
+                                                '+$remaining more active',
+                                                style: const TextStyle(
+                                                    color:
+                                                        AppColors.textSecondary,
+                                                    fontSize: 12,
+                                                    fontWeight:
+                                                        FontWeight.bold)),
                                           ),
-                                          title: Text(a.userName ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w600)),
-                                          subtitle: Text('${a.siteName ?? 'Unknown'} · Checked In: ${DateFormat('HH:mm').format(a.checkInTime)}'),
-                                        )),
-                                    if (remaining > 0)
-                                      Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 8),
-                                        child: Text('+$remaining more active', style: const TextStyle(color: AppColors.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
-                                      ),
-                                    const Divider(height: 1),
-                                    TextButton(
-                                      onPressed: () => context.push('/attendance-live'),
-                                      child: const Text('View All Active →'),
-                                    )
-                                  ],
-                                ),
+                                        const Divider(height: 1),
+                                        TextButton(
+                                          onPressed: () =>
+                                              context.push('/attendance-live'),
+                                          child:
+                                              const Text('View All Active →'),
+                                        )
+                                      ],
+                                    ),
+                                  );
+                                },
+                                loading: () => const LinearProgressIndicator(),
+                                error: (_, __) => const SizedBox(),
                               );
-                            },
-                            loading: () => const LinearProgressIndicator(),
-                            error: (_, __) => const SizedBox(),
-                          );
                         },
                       ),
                       const SizedBox(height: 16),
-                      Text('Recent Completed Shifts', style: AppTypography.body.copyWith(fontWeight: FontWeight.bold)),
+                      Text('Recent Completed Shifts',
+                          style: AppTypography.body
+                              .copyWith(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8),
                       Consumer(
                         builder: (context, ref, child) {
-                          return ref.watch(companyAttendanceHistoryProvider).when(
-                            data: (history) {
-                              final completed = history.where((a) => a.checkOutTime != null).toList();
-                              if (completed.isEmpty) return const Text('No completed shifts today.');
-                              return Card(
-                                elevation: 0,
-                                color: AppColors.surface,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: const BorderSide(color: AppColors.border),
-                                ),
-                                child: Column(
-                                  children: [
-                                    ...completed.take(3).map((a) {
-                                      final diff = a.checkOutTime!.difference(a.checkInTime);
-                                      final duration = '${(diff.inMinutes / 60).toStringAsFixed(1)}h';
-                                      return ListTile(
-                                        leading: const CircleAvatar(
-                                          backgroundColor: AppColors.background,
-                                          child: Icon(Icons.logout, color: AppColors.textSecondary, size: 20),
-                                        ),
-                                        title: Text(a.userName ?? 'Unknown', style: const TextStyle(fontWeight: FontWeight.w600)),
-                                        subtitle: Text('${a.siteName ?? 'Unknown'} · $duration'),
-                                        trailing: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.background,
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: const Text('Checked Out', style: TextStyle(fontSize: 10, color: AppColors.textSecondary, fontWeight: FontWeight.bold)),
-                                        ),
-                                      );
-                                    }),
-                                    const Divider(height: 1),
-                                    TextButton(
-                                      onPressed: () => context.push('/attendance-history'),
-                                      child: const Text('View All History →'),
-                                    )
-                                  ],
-                                ),
+                          return ref
+                              .watch(companyAttendanceHistoryProvider)
+                              .when(
+                                data: (history) {
+                                  final completed = history
+                                      .where((a) => a.checkOutTime != null)
+                                      .toList();
+                                  if (completed.isEmpty)
+                                    return const Text(
+                                        'No completed shifts today.');
+                                  return Card(
+                                    elevation: 0,
+                                    color: AppColors.surface,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      side: const BorderSide(
+                                          color: AppColors.border),
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        ...completed.take(3).map((a) {
+                                          final diff = a.checkOutTime!
+                                              .difference(a.checkInTime);
+                                          final duration =
+                                              '${(diff.inMinutes / 60).toStringAsFixed(1)}h';
+                                          return ListTile(
+                                            leading: const CircleAvatar(
+                                              backgroundColor:
+                                                  AppColors.background,
+                                              child: Icon(Icons.logout,
+                                                  color:
+                                                      AppColors.textSecondary,
+                                                  size: 20),
+                                            ),
+                                            title: Text(a.userName ?? 'Unknown',
+                                                style: const TextStyle(
+                                                    fontWeight:
+                                                        FontWeight.w600)),
+                                            subtitle: Text(
+                                                '${a.siteName ?? 'Unknown'} · $duration'),
+                                            trailing: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.background,
+                                                borderRadius:
+                                                    BorderRadius.circular(8),
+                                              ),
+                                              child: const Text('Checked Out',
+                                                  style: TextStyle(
+                                                      fontSize: 10,
+                                                      color: AppColors
+                                                          .textSecondary,
+                                                      fontWeight:
+                                                          FontWeight.bold)),
+                                            ),
+                                          );
+                                        }),
+                                        const Divider(height: 1),
+                                        TextButton(
+                                          onPressed: () => context
+                                              .push('/attendance-history'),
+                                          child:
+                                              const Text('View All History →'),
+                                        )
+                                      ],
+                                    ),
+                                  );
+                                },
+                                loading: () => const LinearProgressIndicator(),
+                                error: (_, __) => const SizedBox(),
                               );
-                            },
-                            loading: () => const LinearProgressIndicator(),
-                            error: (_, __) => const SizedBox(),
-                          );
                         },
                       ),
                       const SizedBox(height: 24),
@@ -214,18 +294,24 @@ class AdminDashboardScreen extends ConsumerWidget {
                       Row(
                         children: [
                           Expanded(
-                            child: GestureDetector(
-                              onTap: () => context.push('/sites'),
-                              child: KpiCard(label: 'Active Sites', value: data['active_sites'].toString(), icon: Icons.location_on_rounded, iconColor: AppColors.secondary),
-                            )
-                          ),
+                              child: GestureDetector(
+                            onTap: () => context.push('/sites'),
+                            child: KpiCard(
+                                label: 'Active Sites',
+                                value: data['active_sites'].toString(),
+                                icon: Icons.location_on_rounded,
+                                iconColor: AppColors.secondary),
+                          )),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: GestureDetector(
-                              onTap: () => context.push('/occupancy'),
-                              child: KpiCard(label: 'Workers On Site', value: data['workers_on_site'].toString(), icon: Icons.engineering_rounded, iconColor: AppColors.primaryDark),
-                            )
-                          ),
+                              child: GestureDetector(
+                            onTap: () => context.push('/occupancy'),
+                            child: KpiCard(
+                                label: 'Workers On Site',
+                                value: data['workers_on_site'].toString(),
+                                icon: Icons.engineering_rounded,
+                                iconColor: AppColors.primaryDark),
+                          )),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -241,11 +327,14 @@ class AdminDashboardScreen extends ConsumerWidget {
                               return Card(
                                 margin: const EdgeInsets.only(bottom: 8),
                                 child: ListTile(
-                                  onTap: () => context.push('/attendance-live?siteId=${site['site_id']}'),
-                                  leading: const Icon(Icons.business_rounded, color: AppColors.primary),
+                                  onTap: () => context.push(
+                                      '/attendance-live?siteId=${site['site_id']}'),
+                                  leading: const Icon(Icons.business_rounded,
+                                      color: AppColors.primary),
                                   title: Text(site['site_name']),
                                   trailing: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 6),
                                     decoration: BoxDecoration(
                                       color: AppColors.primarySurface,
                                       borderRadius: BorderRadius.circular(16),
@@ -264,12 +353,18 @@ class AdminDashboardScreen extends ConsumerWidget {
                           );
                         },
                         loading: () => const LinearProgressIndicator(),
-                        error: (_, __) => const Text('Failed to load occupancy data'),
+                        error: (_, __) =>
+                            const Text('Failed to load occupancy data'),
                       ),
                     ],
                   ),
-                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-                  error: (error, _) => Center(child: Text('Error: $error', style: const TextStyle(color: AppColors.danger))),
+                  loading: () => const Center(
+                      child: Padding(
+                          padding: EdgeInsets.all(40),
+                          child: CircularProgressIndicator())),
+                  error: (error, _) => Center(
+                      child: Text('Error: $error',
+                          style: const TextStyle(color: AppColors.danger))),
                 ),
               ],
             ),
@@ -281,15 +376,26 @@ class AdminDashboardScreen extends ConsumerWidget {
 
   Widget _header(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Admin Dashboard', style: AppTypography.h2),
-            const SizedBox(height: 4),
-            Text('Platform Overview', style: AppTypography.body.copyWith(color: AppColors.textSecondary)),
-          ],
+        Image.asset(
+          'assets/images/logo.png',
+          width: 50,
+          height: 50,
+          errorBuilder: (context, error, stackTrace) => const Icon(Icons.business, size: 50, color: AppColors.primary),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Limelite Construction', style: AppTypography.h3),
+              const SizedBox(height: 2),
+              Text('Masters of Consistency and Quality', style: AppTypography.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 4),
+              Text('Welcome back, Nilesh Patel', style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
+            ],
+          ),
         ),
         IconButton(
           icon: const Icon(Icons.analytics_rounded, color: AppColors.textSecondary),

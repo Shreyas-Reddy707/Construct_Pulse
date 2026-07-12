@@ -20,7 +20,7 @@ class WorkerDashboardScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authProvider).user;
     final now = DateTime.now();
-    final todayAttendanceAsync = ref.watch(todayAttendanceProvider);
+    final attendanceHistoryAsync = ref.watch(attendanceHistoryProvider);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -35,7 +35,7 @@ class WorkerDashboardScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // ── Attendance Status Card ──────────────────
-              todayAttendanceAsync.when(
+              attendanceHistoryAsync.when(
                 data: (attendanceList) => _buildAttendanceCard(context, attendanceList),
                 loading: () => const CircularProgressIndicator(),
                 error: (e, _) => const Text('Failed to load attendance'),
@@ -78,7 +78,7 @@ class WorkerDashboardScreen extends ConsumerWidget {
               // ── KPI Cards ──────────────────────────────
               Text('Today\'s Summary', style: AppTypography.h4),
               const SizedBox(height: 12),
-              todayAttendanceAsync.when(
+              attendanceHistoryAsync.when(
                 data: (attendanceList) {
                   if (attendanceList.isEmpty) {
                     return GridView.count(
@@ -96,6 +96,42 @@ class WorkerDashboardScreen extends ConsumerWidget {
                       ],
                     );
                   }
+                  
+                  // Compute actual stats from history
+                  final currentMonth = DateTime.now().month;
+                  final currentYear = DateTime.now().year;
+                  
+                  int daysThisMonth = 0;
+                  int totalHoursThisMonth = 0;
+                  int totalHoursAllTime = 0;
+                  int todayHours = 0;
+                  
+                  Set<String> uniqueDaysThisMonth = {};
+                  
+                  for (var a in attendanceList) {
+                    final dt = a.checkInTime.toLocal();
+                    int durationHours = 0;
+                    if (a.checkOutTime != null) {
+                      durationHours = a.checkOutTime!.difference(a.checkInTime).inHours;
+                    } else {
+                      durationHours = DateTime.now().difference(a.checkInTime).inHours;
+                    }
+                    
+                    totalHoursAllTime += durationHours;
+                    
+                    if (dt.month == currentMonth && dt.year == currentYear) {
+                        uniqueDaysThisMonth.add("${dt.day}");
+                        totalHoursThisMonth += durationHours;
+                        
+                        if (dt.day == DateTime.now().day) {
+                            todayHours += durationHours;
+                        }
+                    }
+                  }
+                  
+                  daysThisMonth = uniqueDaysThisMonth.length;
+                  int overtime = (totalHoursThisMonth > (daysThisMonth * 8)) ? totalHoursThisMonth - (daysThisMonth * 8) : 0;
+                  
                   return GridView.count(
                     crossAxisCount: 2,
                     shrinkWrap: true,
@@ -104,10 +140,10 @@ class WorkerDashboardScreen extends ConsumerWidget {
                     mainAxisSpacing: 12,
                     childAspectRatio: 1.4,
                     children: [
-                      const KpiCard(icon: Icons.access_time_rounded, value: '8h', label: "Today's Hours", trend: '+0', iconColor: AppColors.primary),
-                      KpiCard(icon: Icons.calendar_month_rounded, value: '${attendanceList.length}', label: 'Days This Month', iconColor: AppColors.success),
-                      const KpiCard(icon: Icons.timer_rounded, value: '0h', label: 'Overtime (Month)', trend: '--', iconColor: AppColors.secondary),
-                      KpiCard(icon: Icons.trending_up_rounded, value: '${attendanceList.length * 8}h', label: 'Total Hours', iconColor: AppColors.info),
+                      KpiCard(icon: Icons.access_time_rounded, value: '${todayHours}h', label: "Today's Hours", trend: '+0', iconColor: AppColors.primary),
+                      KpiCard(icon: Icons.calendar_month_rounded, value: '$daysThisMonth', label: 'Days This Month', iconColor: AppColors.success),
+                      KpiCard(icon: Icons.timer_rounded, value: '${overtime}h', label: 'Overtime (Month)', trend: '--', iconColor: AppColors.secondary),
+                      KpiCard(icon: Icons.trending_up_rounded, value: '${totalHoursAllTime}h', label: 'Total Hours', iconColor: AppColors.info),
                     ],
                   );
                 },
@@ -117,7 +153,7 @@ class WorkerDashboardScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // ── Recent Attendance ───────────────────────
-              todayAttendanceAsync.when(
+              attendanceHistoryAsync.when(
                 data: (attendanceList) => _buildRecentAttendance(context, attendanceList),
                 loading: () => const CircularProgressIndicator(),
                 error: (e, _) => const Text('Failed to load recent attendance'),
@@ -125,7 +161,7 @@ class WorkerDashboardScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // ── Assigned Site ───────────────────────────
-              todayAttendanceAsync.when(
+              attendanceHistoryAsync.when(
                 data: (attendanceList) => _buildAssignedSite(attendanceList),
                 loading: () => const CircularProgressIndicator(),
                 error: (e, _) => const SizedBox.shrink(),
@@ -142,21 +178,27 @@ class WorkerDashboardScreen extends ConsumerWidget {
     final greeting = now.hour < 12 ? 'Good Morning' : now.hour < 17 ? 'Good Afternoon' : 'Good Evening';
     return Row(
       children: [
-        Container(
-          width: 48, height: 48,
-          decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(14),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(14),
+          child: Image.asset('assets/images/logo.png', width: 48, height: 48, fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) => Container(
+              width: 48, height: 48,
+              decoration: BoxDecoration(
+                gradient: AppColors.primaryGradient,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'W',
+                  style: AppTypography.h4.copyWith(color: Colors.white))),
+            ),
           ),
-          child: Center(child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'W',
-              style: AppTypography.h4.copyWith(color: Colors.white))),
         ),
         const SizedBox(width: 12),
         Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(greeting, style: AppTypography.caption.copyWith(fontSize: 12)),
+            Text('Limelite Construction', style: AppTypography.caption.copyWith(fontSize: 12, color: AppColors.primary)),
             Text(name, style: AppTypography.h4),
+            Text('Masters of Consistency and Quality', style: AppTypography.caption.copyWith(fontSize: 10)),
           ],
         )),
         IconButton(
@@ -173,12 +215,13 @@ class WorkerDashboardScreen extends ConsumerWidget {
   }
 
   Widget _buildAttendanceCard(BuildContext context, List<Attendance> attendanceList) {
-    final hasActiveCheckIn = attendanceList.isNotEmpty && attendanceList.last.status == AttendanceStatus.checkedIn;
+    final recent = attendanceList.isNotEmpty ? attendanceList.first : null;
+    final hasActiveCheckIn = recent != null && recent.status == AttendanceStatus.checkedIn;
     final currentStatus = hasActiveCheckIn ? '● Checked In' : '● Not Checked In';
     final statusColor = hasActiveCheckIn ? AppColors.success : AppColors.textTertiary;
-    final inTime = attendanceList.isNotEmpty ? "${attendanceList.last.checkInTime.hour.toString().padLeft(2, '0')}:${attendanceList.last.checkInTime.minute.toString().padLeft(2, '0')}" : '--:--';
-    final hours = attendanceList.isNotEmpty && attendanceList.last.checkOutTime != null ? 
-        "${attendanceList.last.checkOutTime!.difference(attendanceList.last.checkInTime).inHours}h" : '--';
+    final inTime = recent != null ? "${recent.checkInTime.toLocal().hour.toString().padLeft(2, '0')}:${recent.checkInTime.toLocal().minute.toString().padLeft(2, '0')}" : '--:--';
+    final hours = recent != null && recent.checkOutTime != null ? 
+        "${recent.checkOutTime!.difference(recent.checkInTime).inHours}h" : (recent != null ? "${DateTime.now().difference(recent.checkInTime).inHours}h" : '--');
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -225,7 +268,7 @@ class WorkerDashboardScreen extends ConsumerWidget {
           Row(children: [
             _statusItem('Check In', inTime),
             const SizedBox(width: 24),
-            Expanded(child: _statusItem('Site', attendanceList.isNotEmpty ? (attendanceList.last.siteName ?? attendanceList.last.siteId) : 'N/A')),
+            Expanded(child: _statusItem('Site', recent != null ? (recent.siteName ?? recent.siteId) : 'N/A')),
             const SizedBox(width: 12),
             _statusItem('Hours', hours),
           ]),
@@ -261,10 +304,10 @@ class WorkerDashboardScreen extends ConsumerWidget {
       ]),
       const SizedBox(height: 8),
       ...attendanceList.take(3).map((a) {
-        final inStr = "${a.checkInTime.hour.toString().padLeft(2, '0')}:${a.checkInTime.minute.toString().padLeft(2, '0')}";
-        final outStr = a.checkOutTime != null ? "${a.checkOutTime!.hour.toString().padLeft(2, '0')}:${a.checkOutTime!.minute.toString().padLeft(2, '0')}" : 'Active';
+        final inStr = "${a.checkInTime.toLocal().hour.toString().padLeft(2, '0')}:${a.checkInTime.toLocal().minute.toString().padLeft(2, '0')}";
+        final outStr = a.checkOutTime != null ? "${a.checkOutTime!.toLocal().hour.toString().padLeft(2, '0')}:${a.checkOutTime!.toLocal().minute.toString().padLeft(2, '0')}" : 'Active';
         final isActive = a.status == AttendanceStatus.checkedIn;
-        final duration = a.checkOutTime != null ? "${a.checkOutTime!.difference(a.checkInTime).inHours}h" : '--';
+        final duration = a.checkOutTime != null ? "${a.checkOutTime!.difference(a.checkInTime).inHours}h" : "${DateTime.now().difference(a.checkInTime).inHours}h";
 
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
@@ -329,7 +372,7 @@ class WorkerDashboardScreen extends ConsumerWidget {
         ),
         const SizedBox(width: 12),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(attendanceList.last.siteName ?? attendanceList.last.siteId, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
+          Text(attendanceList.first.siteName ?? attendanceList.first.siteId, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
           Text('Active Site', style: AppTypography.caption.copyWith(fontSize: 12)),
         ])),
         const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),

@@ -16,9 +16,16 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
+  static const List<Map<String, String>> _supportedCountries = [
+    {'code': '+64', 'label': '🇳🇿 +64'},
+    {'code': '+91', 'label': '🇮🇳 +91'},
+    {'code': '+1', 'label': '🇺🇸 +1'},
+    {'code': '+44', 'label': '🇬🇧 +44'},
+  ];
+
   final _phoneController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  String _countryCode = '+91';
+  String _countryCode = '+64';
 
   @override
   void dispose() {
@@ -160,20 +167,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           value: _countryCode,
                           underline: const SizedBox(),
                           isDense: true,
-                          items: const [
-                            DropdownMenuItem(
-                              value: '+91',
-                              child: Text('🇮🇳 +91'),
-                            ),
-                            DropdownMenuItem(
-                              value: '+1',
-                              child: Text('🇺🇸 +1'),
-                            ),
-                            DropdownMenuItem(
-                              value: '+44',
-                              child: Text('🇬🇧 +44'),
-                            ),
-                          ],
+                          items: _supportedCountries.map((country) {
+                            return DropdownMenuItem(
+                              value: country['code'],
+                              child: Text(country['label']!),
+                            );
+                          }).toList(),
                           onChanged: (v) =>
                               setState(() => _countryCode = v ?? '+91'),
                         ),
@@ -187,7 +186,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         keyboardType: TextInputType.phone,
                         inputFormatters: [
                           FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(10),
+                          LengthLimitingTextInputFormatter(15),
                         ],
                         style: AppTypography.body,
                         decoration: InputDecoration(
@@ -206,7 +205,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           if (value == null || value.isEmpty) {
                             return 'Phone number is required';
                           }
-                          if (value.length < 10) {
+                          if (value.length < 7) {
                             return 'Enter a valid phone number';
                           }
                           return null;

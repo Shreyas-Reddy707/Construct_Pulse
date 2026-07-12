@@ -73,3 +73,9 @@ backend/venv/
 # Debug output
 output.txt
 *.log
+
+# Mobile specifics
+android/local.properties
+ios/Pods/
+firebase-debug.log
+

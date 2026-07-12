@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Response
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List
 from datetime import datetime, timezone, timedelta
 import math
@@ -161,15 +161,15 @@ def get_occupancy(db: Session = Depends(get_db), current_user: User = Depends(ge
 
 @router.get("/history", response_model=List[schemas.AttendanceResponse])
 def get_company_attendance_history(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    query = db.query(Attendance)
+    query = db.query(Attendance).options(joinedload(Attendance.user), joinedload(Attendance.site))
     if current_user.company_id:
         query = query.filter(Attendance.company_id == current_user.company_id)
     
     results = query.order_by(Attendance.check_in_time.desc()).all()
     attendances = []
     for att in results:
-        user = db.query(User).filter(User.id == att.user_id).first()
-        site = db.query(Site).filter(Site.id == att.site_id).first()
+        user = att.user
+        site = att.site
         attendances.append(schemas.AttendanceResponse(
             id=att.id,
             user_id=att.user_id,
@@ -189,15 +189,15 @@ def get_company_attendance_history(db: Session = Depends(get_db), current_user: 
 
 @router.get("/history/{worker_id}", response_model=List[schemas.AttendanceResponse])
 def get_attendance_history(worker_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    query = db.query(Attendance).filter(Attendance.user_id == worker_id)
+    query = db.query(Attendance).options(joinedload(Attendance.user), joinedload(Attendance.site)).filter(Attendance.user_id == worker_id)
     if current_user.company_id:
         query = query.filter(Attendance.company_id == current_user.company_id)
     
     results = query.order_by(Attendance.check_in_time.desc()).all()
     attendances = []
     for att in results:
-        user = db.query(User).filter(User.id == att.user_id).first()
-        site = db.query(Site).filter(Site.id == att.site_id).first()
+        user = att.user
+        site = att.site
         attendances.append(schemas.AttendanceResponse(
             id=att.id,
             user_id=att.user_id,

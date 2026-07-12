@@ -81,16 +81,30 @@ class CompanyDetailScreen extends ConsumerWidget {
 
   Widget _buildInfoCard() {
     return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.border),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Text('Company Information', style: AppTypography.h3),
+            Image.asset(
+              'assets/images/logo.png',
+              width: 80,
+              height: 80,
+              errorBuilder: (context, error, stackTrace) => const Icon(Icons.business, size: 80, color: AppColors.primary),
+            ),
             const SizedBox(height: 16),
-            _infoRow('Name', company.name),
-            _infoRow('Registration', company.registrationNumber ?? 'N/A'),
-            _infoRow('Email', company.contactEmail ?? 'N/A'),
+            Text(company.name, style: AppTypography.h3, textAlign: TextAlign.center),
+            const SizedBox(height: 4),
+            Text('Masters of Consistency and Quality', style: AppTypography.bodySmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold), textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            const Divider(),
+            const SizedBox(height: 16),
+            _infoRow('Admin', 'Nilesh Patel'),
             _infoRow('Phone', company.contactPhone ?? 'N/A'),
           ],
         ),

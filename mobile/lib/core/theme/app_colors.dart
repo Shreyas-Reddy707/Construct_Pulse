@@ -5,11 +5,11 @@ class AppColors {
   AppColors._();
 
   // ── Brand Colors ──────────────────────────────────────────
-  /// Construction Blue – Primary brand color
-  static const Color primary = Color(0xFF1E5EFF);
-  static const Color primaryLight = Color(0xFF5A8AFF);
-  static const Color primaryDark = Color(0xFF0040CC);
-  static const Color primarySurface = Color(0xFFE8EEFF);
+  /// Construction Blue – Primary brand color (Now DemoCompany Green)
+  static const Color primary = Color(0xFF98C836);
+  static const Color primaryLight = Color(0xFFA5D14E);
+  static const Color primaryDark = Color(0xFF86B32D);
+  static const Color primarySurface = Color(0xFFF3F9EA);
 
   /// Safety Orange – Secondary / Accent
   static const Color secondary = Color(0xFFFF8A00);
@@ -66,7 +66,7 @@ class AppColors {
   static const LinearGradient primaryGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
-    colors: [Color(0xFF1E5EFF), Color(0xFF3B82F6)],
+    colors: [Color(0xFF98C836), Color(0xFF86B32D)],
   );
 
   static const LinearGradient accentGradient = LinearGradient(

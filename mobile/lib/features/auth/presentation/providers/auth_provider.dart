@@ -15,6 +15,8 @@ enum AuthStatus {
   authenticated,
   pendingApproval,
   registering,
+  rejected,
+  suspended,
   unauthenticated,
   error,
 }
@@ -107,10 +109,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
             _handleSignInResult(result);
           } catch (e) {
             debugPrint('AuthNotifier: verificationCompleted Error: $e');
-            state = state.copyWith(
-              status: AuthStatus.error,
-              errorMessage: e.toString(),
-            );
+            final errStr = e.toString().toLowerCase();
+            if (errStr.contains('account rejected')) {
+              state = state.copyWith(status: AuthStatus.rejected, errorMessage: 'Your account was rejected by the company admin.');
+            } else if (errStr.contains('account suspended')) {
+              state = state.copyWith(status: AuthStatus.suspended, errorMessage: 'Your account has been suspended.');
+            } else {
+              state = state.copyWith(
+                status: AuthStatus.error,
+                errorMessage: e.toString(),
+              );
+            }
           }
         },
         verificationFailed: (error) {
@@ -158,10 +167,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final result = await _repo.verifyOtp(state.verificationId!, code);
       await _handleSignInResult(result);
     } catch (e) {
-      state = state.copyWith(
-        status: AuthStatus.error,
-        errorMessage: e.toString(),
-      );
+      final errStr = e.toString().toLowerCase();
+      if (errStr.contains('account rejected')) {
+        state = state.copyWith(status: AuthStatus.rejected, errorMessage: 'Your account was rejected by the company admin.');
+      } else if (errStr.contains('account suspended')) {
+        state = state.copyWith(status: AuthStatus.suspended, errorMessage: 'Your account has been suspended.');
+      } else {
+        state = state.copyWith(
+          status: AuthStatus.error,
+          errorMessage: e.toString(),
+        );
+      }
     }
   }
 

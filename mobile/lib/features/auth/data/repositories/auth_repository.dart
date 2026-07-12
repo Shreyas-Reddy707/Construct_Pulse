@@ -121,6 +121,15 @@ class AuthRepository {
         // "User not registered" - proceed to registration
         return (isNewUser: true, accessToken: null, refreshToken: null);
       }
+      if (e.response?.statusCode == 403) {
+        final detail = e.response?.data?['detail'] ?? '';
+        if (detail.toString().toLowerCase().contains('rejected')) {
+          throw const AuthException(message: 'Account rejected');
+        }
+        if (detail.toString().toLowerCase().contains('suspended')) {
+          throw const AuthException(message: 'Account suspended');
+        }
+      }
       throw mapDioException(e);
     }
   }

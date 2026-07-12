@@ -22,34 +22,74 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: 24),
             // Avatar
             Container(
-              width: 88, height: 88,
+              width: 100, height: 100,
               decoration: BoxDecoration(
                 gradient: AppColors.primaryGradient,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(30),
+                boxShadow: [
+                  BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 10)),
+                ],
               ),
               child: Center(child: Text(
                 user?.initials ?? 'WK',
-                style: AppTypography.h2.copyWith(color: Colors.white),
+                style: AppTypography.h1.copyWith(color: Colors.white),
               )),
             ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset('assets/images/logo.png', width: 60, height: 60, fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => const Icon(Icons.business_rounded, size: 40, color: AppColors.primary),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Demo Company', style: AppTypography.h4.copyWith(color: AppColors.primary)),
+                        Text('Building the Future Together', style: AppTypography.caption.copyWith(fontSize: 10)),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.phone_rounded, size: 12, color: AppColors.textSecondary),
+                            const SizedBox(width: 4),
+                            Text('03 000 0000', style: AppTypography.caption.copyWith(fontSize: 11)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
-            Text(user?.fullName ?? 'Worker', style: AppTypography.h3),
-            const SizedBox(height: 4),
-            Text(user?.designation ?? 'Construction Worker', style: AppTypography.caption),
-            const SizedBox(height: 4),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               decoration: BoxDecoration(
-                color: AppColors.primarySurface, borderRadius: BorderRadius.circular(20)),
-              child: Text(user?.role.label ?? 'Worker',
-                  style: AppTypography.label.copyWith(color: AppColors.primary)),
+                color: user?.status.toString().contains('APPROVED') == true || user?.status.toString().contains('approved') == true ? AppColors.successLight : AppColors.warningLight, 
+                borderRadius: BorderRadius.circular(20)
+              ),
+              child: Text(user?.status != null ? user!.status.toString().split('.').last.toUpperCase() : 'APPROVED',
+                  style: AppTypography.label.copyWith(color: user?.status.toString().contains('APPROVED') == true || user?.status.toString().contains('approved') == true ? AppColors.successDark : AppColors.warningDark)),
             ),
             const SizedBox(height: 32),
             // Menu Items
             _menuSection('Account', [
               _menuItem(Icons.person_outline_rounded, 'Edit Profile', () {}),
               _menuItem(Icons.phone_outlined, 'Phone: ${user?.phone ?? ''}', null),
-              _menuItem(Icons.business_rounded, user?.departmentName ?? 'Department', null),
+              _menuItem(Icons.badge_outlined, 'Role: ${user?.role.label ?? "Worker"}', null),
+              _menuItem(Icons.business_rounded, 'Dept: ${user?.departmentName ?? "N/A"}', null),
+              _menuItem(Icons.handyman_rounded, 'Contractor: ${user?.contractorName ?? "N/A"}', null),
             ]),
             const SizedBox(height: 16),
             _menuSection('Work', [

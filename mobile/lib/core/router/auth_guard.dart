@@ -33,6 +33,14 @@ String? authGuard(BuildContext context, GoRouterState state, AuthState authState
     return '/auth/pending';
   }
   
+  if (status == AuthStatus.rejected && path != '/auth/rejected') {
+    return '/auth/rejected';
+  }
+  
+  if (status == AuthStatus.suspended && path != '/auth/suspended') {
+    return '/auth/suspended';
+  }
+  
   if (status == AuthStatus.authenticated && path.startsWith('/auth')) {
     return '/'; // Go to home if already authenticated and trying to access auth pages
   }

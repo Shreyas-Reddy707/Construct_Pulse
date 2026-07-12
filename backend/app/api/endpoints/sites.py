@@ -11,14 +11,14 @@ from app.api.deps import get_current_user, RoleChecker
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.SiteResponse])
+@router.get("", response_model=List[schemas.SiteResponse])
 def read_sites(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     query = db.query(Site)
     if current_user.company_id:
         query = query.filter(Site.company_id == current_user.company_id)
     return query.offset(skip).limit(limit).all()
 
-@router.post("/", response_model=schemas.SiteResponse)
+@router.post("", response_model=schemas.SiteResponse)
 def create_site(site_in: schemas.SiteCreate, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
     site_data = site_in.model_dump()
     if current_user.company_id:
@@ -144,7 +144,7 @@ def assign_contractor(site_id: str, assignment: schemas.SiteAssignment, db: Sess
     return {"message": "Contractor assigned successfully"}
 
 @router.get("/{site_id}/assignments", response_model=schemas.SiteAssignmentsResponse)
-def get_assignments(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(RoleChecker([UserRole.COMPANY_ADMIN]))):
+def get_assignments(site_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     site = db.query(Site).filter(Site.id == site_id)
     if current_user.company_id:
         site = site.filter(Site.company_id == current_user.company_id)

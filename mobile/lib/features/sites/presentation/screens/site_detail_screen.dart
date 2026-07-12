@@ -11,12 +11,16 @@ import '../../../auth/presentation/providers/auth_provider.dart';
 
 class SiteDetailScreen extends ConsumerWidget {
   final String siteId;
-  
+
   const SiteDetailScreen({super.key, required this.siteId});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final siteAsync = ref.watch(siteProvider(siteId));
+    final assignmentsAsync = ref.watch(siteAssignmentsProvider(siteId));
+    
+    // We can't directly read occupancyProvider if it requires a ref.watch, but we can if we import it.
+    // However, I will use assignmentsAsync to get the supervisor.
     final currentUser = ref.watch(authProvider).user;
     final isWorker = currentUser?.isWorker ?? true;
     final isAdmin = currentUser?.isAdmin ?? false;
@@ -35,7 +39,9 @@ class SiteDetailScreen extends ConsumerWidget {
             IconButton(
               icon: const Icon(Icons.edit_rounded),
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Site management available in admin version')));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content:
+                        Text('Site management available in admin version')));
               },
             ),
         ],
@@ -55,16 +61,28 @@ class SiteDetailScreen extends ConsumerWidget {
                 ),
                 child: Column(
                   children: [
-                    const Icon(Icons.location_city_rounded, size: 48, color: AppColors.primary),
+                    Image.asset('assets/images/logo.png', width: 64, height: 64, fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.location_city_rounded, size: 48, color: AppColors.primary)),
+                    const SizedBox(height: 12),
+                    Text('Demo Company', style: AppTypography.caption.copyWith(color: AppColors.primary)),
                     const SizedBox(height: 16),
-                    Text(site.name, style: AppTypography.h3.copyWith(color: AppColors.primaryDark), textAlign: TextAlign.center),
+                    Text(site.name,
+                        style: AppTypography.h3
+                            .copyWith(color: AppColors.primaryDark),
+                        textAlign: TextAlign.center),
                     const SizedBox(height: 8),
-                    site.status == 'active' ? StatusBadge.active() : const StatusBadge(label: 'Inactive', color: AppColors.surfaceVariant, textColor: AppColors.textTertiary),
+                    site.status == 'active'
+                        ? StatusBadge.active()
+                        : const StatusBadge(
+                            label: 'Inactive',
+                            color: AppColors.surfaceVariant,
+                            textColor: AppColors.textTertiary),
                   ],
                 ),
               ),
               const SizedBox(height: 24),
-              Text('Location Details', style: AppTypography.h4.copyWith(fontSize: 16)),
+              Text('Location & Team Details',
+                  style: AppTypography.h4.copyWith(fontSize: 16)),
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(16),
@@ -73,12 +91,32 @@ class SiteDetailScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: Column(
-                  children: [
-                    _buildInfoRow(Icons.map_outlined, 'Address', site.address ?? 'Not specified'),
-                    _buildInfoRow(Icons.my_location_rounded, 'Coordinates', '${site.latitude?.toStringAsFixed(6) ?? "N/A"}, ${site.longitude?.toStringAsFixed(6) ?? "N/A"}'),
-                    _buildInfoRow(Icons.radar_rounded, 'Geofence Radius', '${site.radius ?? 0} meters'),
-                  ],
+                child: assignmentsAsync.when(
+                  data: (assignments) {
+                    final assignedWorkersList = (assignments['workers'] as List?) ?? [];
+                    final supervisor = assignedWorkersList.cast<dynamic>().firstWhere(
+                      (u) => u.role.value == 'Company Admin' || u.role.value == 'Supervisor',
+                      orElse: () => null,
+                    );
+                    
+                    return Column(
+                      children: [
+                        _buildInfoRow(Icons.map_outlined, 'Address', site.address ?? 'Not specified'),
+                        _buildInfoRow(Icons.my_location_rounded, 'Coordinates', '${site.latitude?.toStringAsFixed(6) ?? "N/A"}, ${site.longitude?.toStringAsFixed(6) ?? "N/A"}'),
+                        _buildInfoRow(Icons.radar_rounded, 'Geofence Radius', '${site.radius ?? 0} meters'),
+                        _buildInfoRow(Icons.groups_rounded, 'Workers Assigned', '${assignedWorkersList.length} workers'),
+                        if (supervisor != null) ...[
+                          _buildInfoRow(Icons.person_rounded, 'Supervisor Name', supervisor.fullName),
+                          _buildInfoRow(Icons.phone_rounded, 'Supervisor Phone', supervisor.phone),
+                        ],
+                        const SizedBox(height: 8),
+                        _buildInfoRow(Icons.business_rounded, 'Company', 'Demo Company'),
+                        _buildInfoRow(Icons.support_agent_rounded, 'Office Contact', '03 000 0000'),
+                      ],
+                    );
+                  },
+                  loading: () => const Center(child: CircularProgressIndicator()),
+                  error: (_, __) => const Text('Error loading assignments'),
                 ),
               ),
               if (!isWorker) ...[
@@ -94,16 +132,20 @@ class SiteDetailScreen extends ConsumerWidget {
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size.fromHeight(56),
                     side: const BorderSide(color: AppColors.primary),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: const Text('Assign Worker', style: TextStyle(color: AppColors.primary)),
+                  child: const Text('Assign Worker',
+                      style: TextStyle(color: AppColors.primary)),
                 ),
               ],
             ],
           ),
         ),
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Error: $err', style: const TextStyle(color: AppColors.danger))),
+        error: (err, _) => Center(
+            child: Text('Error: $err',
+                style: const TextStyle(color: AppColors.danger))),
       ),
     );
   }
@@ -112,8 +154,10 @@ class SiteDetailScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) => Consumer(
         builder: (context, ref, child) {
           final workersAsync = ref.watch(workersListProvider(null));
@@ -131,35 +175,65 @@ class SiteDetailScreen extends ConsumerWidget {
                   child: workersAsync.when(
                     data: (workers) => assignmentsAsync.when(
                       data: (assignments) {
-                        final assignedWorkersList = (assignments['workers'] as List?) ?? [];
-                        final assignedWorkerIds = assignedWorkersList.map((u) => u.id).toList();
-                        
+                        final assignedWorkersList =
+                            (assignments['workers'] as List?) ?? [];
+                        final assignedWorkerIds =
+                            assignedWorkersList.map((u) => u.id).toList();
+
                         return ListView.builder(
                           itemCount: workers.length,
                           itemBuilder: (context, index) {
                             final worker = workers[index];
-                            final isAssigned = assignedWorkerIds.contains(worker.id);
-                            
+                            final isAssigned =
+                                assignedWorkerIds.contains(worker.id);
+
                             return ListTile(
-                              title: Text(worker.fullName, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w600)),
-                              subtitle: Text(worker.phone, style: AppTypography.caption),
+                              title: Text(worker.fullName,
+                                  style: AppTypography.bodySmall
+                                      .copyWith(fontWeight: FontWeight.w600)),
+                              subtitle: Text(worker.phone,
+                                  style: AppTypography.caption),
                               trailing: actionState.isLoading
-                                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                                  : isAssigned 
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2))
+                                  : isAssigned
                                       ? TextButton(
                                           onPressed: () async {
-                                            await ref.read(siteActionNotifierProvider.notifier).unassignWorker(siteId, worker.id);
+                                            await ref
+                                                .read(siteActionNotifierProvider
+                                                    .notifier)
+                                                .unassignWorker(
+                                                    siteId, worker.id);
                                             if (ctx.mounted) {
-                                              ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Worker unassigned'), backgroundColor: AppColors.surfaceVariant));
+                                              ScaffoldMessenger.of(ctx)
+                                                  .showSnackBar(const SnackBar(
+                                                      content: Text(
+                                                          'Worker unassigned'),
+                                                      backgroundColor: AppColors
+                                                          .surfaceVariant));
                                             }
                                           },
-                                          child: const Text('Unassign', style: TextStyle(color: AppColors.danger)),
+                                          child: const Text('Unassign',
+                                              style: TextStyle(
+                                                  color: AppColors.danger)),
                                         )
                                       : TextButton(
                                           onPressed: () async {
-                                            await ref.read(siteActionNotifierProvider.notifier).assignWorker(siteId, worker.id);
+                                            await ref
+                                                .read(siteActionNotifierProvider
+                                                    .notifier)
+                                                .assignWorker(
+                                                    siteId, worker.id);
                                             if (ctx.mounted) {
-                                              ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(content: Text('Worker assigned successfully'), backgroundColor: AppColors.success));
+                                              ScaffoldMessenger.of(ctx)
+                                                  .showSnackBar(const SnackBar(
+                                                      content: Text(
+                                                          'Worker assigned successfully'),
+                                                      backgroundColor:
+                                                          AppColors.success));
                                             }
                                           },
                                           child: const Text('Assign'),
@@ -168,10 +242,13 @@ class SiteDetailScreen extends ConsumerWidget {
                           },
                         );
                       },
-                      loading: () => const Center(child: CircularProgressIndicator()),
-                      error: (e, _) => Center(child: Text('Error loading assignments: $e')),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (e, _) =>
+                          Center(child: Text('Error loading assignments: $e')),
                     ),
-                    loading: () => const Center(child: CircularProgressIndicator()),
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
                     error: (e, _) => Center(child: Text('Error: $e')),
                   ),
                 ),
@@ -197,7 +274,9 @@ class SiteDetailScreen extends ConsumerWidget {
               children: [
                 Text(label, style: AppTypography.caption),
                 const SizedBox(height: 2),
-                Text(value, style: AppTypography.bodySmall.copyWith(fontWeight: FontWeight.w500)),
+                Text(value,
+                    style: AppTypography.bodySmall
+                        .copyWith(fontWeight: FontWeight.w500)),
               ],
             ),
           ),

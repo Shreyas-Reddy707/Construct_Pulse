@@ -8,7 +8,7 @@ from app.api.deps import get_current_user, RoleChecker
 
 router = APIRouter()
 
-@router.get("/", response_model=List[schemas.ContractorResponse])
+@router.get("", response_model=List[schemas.ContractorResponse])
 def read_contractors(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     query = db.query(Contractor)
     if current_user.company_id:
