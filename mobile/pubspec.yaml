@@ -14,8 +14,8 @@ dependencies:
     sdk: flutter
 
   # State Management
-  flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
+  flutter_riverpod: ^3.3.2
+  riverpod_annotation: ^4.0.3
 
   # Navigation
   go_router: ^14.6.2
@@ -53,8 +53,8 @@ dependencies:
   # Utilities
   intl: ^0.20.2
   uuid: ^4.5.1
-  json_annotation: ^4.9.0
-  freezed_annotation: ^2.4.4
+  json_annotation: ^4.12.0
+  freezed_annotation: ^3.1.0
   equatable: ^2.0.7
   dartz: ^0.10.1
 
@@ -76,12 +76,12 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  build_runner: ^2.4.13
-  json_serializable: ^6.8.0
-  freezed: ^2.5.7
-  retrofit_generator: ^9.1.5
-  riverpod_generator: ^2.6.3
-  mockito: ^5.4.4
+  build_runner: ^2.15.1
+  json_serializable: ^6.14.0
+  freezed: ^3.2.6-dev.1
+  retrofit_generator: ^10.2.7
+  riverpod_generator: ^4.0.4
+  mockito: ^5.6.4
 
 flutter:
   uses-material-design: true
