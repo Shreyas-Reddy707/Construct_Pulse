@@ -53,7 +53,7 @@ python-jose==3.5.0
 requests==2.34.2
 rsa==4.9.1
 six==1.17.0
-slowapi==0.1.9
+slowapi==0.1.10
 SQLAlchemy==2.0.50
 starlette==1.2.1
 typing-inspection==0.4.2
