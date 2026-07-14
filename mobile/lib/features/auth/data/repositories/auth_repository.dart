@@ -163,15 +163,7 @@ class AuthRepository {
       );
 
       final data = response.data;
-      final accessToken = data['access_token'] as String?;
-      if (AppConstants.demoAuth && accessToken != null) {
-        await _storage.setAccessToken(accessToken);
-      }
-
-      return (
-        userId: data['user_id'] as String,
-        status: data['status'] as String,
-      );
+      return (userId: data['user_id'] as String, status: data['status'] as String);
     } on DioException catch (e) {
       throw mapDioException(e);
     }

@@ -101,16 +101,14 @@ def register_worker(request: RegisterWorkerRequest, db: Session = Depends(get_db
         company_id=request.company_id,
         department_id=request.department_id,
         contractor_id=request.contractor_id,
-        is_active=True if DEMO_AUTH else False,
-        status=WorkerStatus.APPROVED if DEMO_AUTH else WorkerStatus.PENDING
+        is_active=False,
+        status=WorkerStatus.PENDING
     )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     
-    access_token = create_access_token(new_user.id)
     return {
         "user_id": str(new_user.id),
-        "status": "success",
-        "access_token": access_token
+        "status": "success"
     }

@@ -4,14 +4,14 @@ class Contractor extends Equatable {
   final String id;
   final String? companyId;
   final String name;
-  final String phone;
+  final String? phone;
   final String? trade;
 
   const Contractor({
     required this.id,
     this.companyId,
     required this.name,
-    required this.phone,
+    this.phone,
     this.trade,
   });
 
@@ -20,7 +20,7 @@ class Contractor extends Equatable {
       id: json['id'] as String,
       companyId: json['company_id'] as String?,
       name: json['name'] as String,
-      phone: json['phone'] as String,
+      phone: json['phone'] as String?,
       trade: json['trade'] as String?,
     );
   }

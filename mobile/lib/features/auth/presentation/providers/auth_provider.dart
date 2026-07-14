@@ -236,20 +236,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         emergencyContactName: emergencyContactName,
         emergencyContactPhone: emergencyContactPhone,
       );
-      if (AppConstants.demoAuth) {
-        try {
-          final user = await _repo.getCurrentUser();
-          state = state.copyWith(
-            status: AuthStatus.authenticated,
-            user: user,
-          );
-        } catch (_) {
-          // If fetching user fails, fallback to pending
-          state = state.copyWith(status: AuthStatus.pendingApproval);
-        }
-      } else {
-        state = state.copyWith(status: AuthStatus.pendingApproval);
-      }
+      state = state.copyWith(status: AuthStatus.pendingApproval);
     } catch (e) {
       state = state.copyWith(
         status: AuthStatus.error,
