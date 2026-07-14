@@ -41,7 +41,7 @@ dependencies:
   geocoding: ^4.0.0
 
   # UI Components
-  google_fonts: ^6.2.1
+  google_fonts: ^8.1.0
   flutter_svg: ^2.0.16
   cached_network_image: ^3.4.1
   shimmer: ^3.0.0
