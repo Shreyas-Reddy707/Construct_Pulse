@@ -2,7 +2,7 @@
 
 **Workforce Intelligence Platform**
 
-ConstructPulse is an enterprise-grade mobile application and backend service designed to modernize and simplify construction workforce management. It provides end-to-end solutions for attendance tracking, emergency mustering, safety compliance, site access, and overall workforce visibility.
+ConstructPulse is an enterprise-grade mobile application and backend service designed to modernize and simplify construction workforce management. It provides end-to-end solutions for attendance tracking, emergency mustering, safety compliance, site access, and overall workforce visibility. update.
 
 ---
 
